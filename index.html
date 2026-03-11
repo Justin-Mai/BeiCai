@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>极简记账</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Ionicons for beautiful simple icons -->
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div id="app" class="app-container">
+        <!-- Header (Only visible on Details Tab) -->
+        <header class="top-header" id="topHeader">
+            <div class="header-content">
+                <!-- Left: Calendar info -->
+                <div class="header-left">
+                    <div class="calendar-icon" id="dateSelector">
+                        <!-- Native date input hidden over the icon (selects exact day, but we only use YYYY-MM for header view) -->
+                        <input type="month" id="nativeDateInput" class="hidden-date-input">
+
+                        <ion-icon name="calendar-outline"></ion-icon>
+                        <div class="cal-date">
+                            <span class="cal-year" id="displayYear">2026</span>
+                            <span class="cal-month-day" id="displayMonth">03月</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vertical divider (Black) -->
+                <div class="divider-vertical"></div>
+
+                <!-- Right: Income & Expense rows -->
+                <div class="header-right">
+                    <div class="summary-row">
+                        <span class="label">月收入</span>
+                        <span class="value" id="topIncomeValue">0.00</span>
+                    </div>
+                    <div class="divider-horizontal"></div>
+                    <div class="summary-row">
+                        <span class="label">月支出</span>
+                        <span class="value" id="topExpenseValue">0.00</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area: Tabs -->
+        <main class="main-content">
+            <!-- 1. Details Tab (Default Active) -->
+            <div id="tab-details" class="tab-pane active">
+                <div class="transaction-list" id="transactionList">
+                    <!-- Rendered by JS -->
+                </div>
+            </div>
+
+            <!-- 2. Charts Tab -->
+            <div id="tab-charts" class="tab-pane">
+                <div class="empty-state">
+                    <ion-icon name="pie-chart-outline"></ion-icon>
+                    <p>图表功能开发中...</p>
+                </div>
+            </div>
+
+            <!-- 4. Assets Tab (Skipping 3 which is the Add button) -->
+            <div id="tab-assets" class="tab-pane">
+                <div class="empty-state">
+                    <ion-icon name="wallet-outline"></ion-icon>
+                    <p>资产功能开发中...</p>
+                </div>
+            </div>
+
+            <!-- 5. Mine Tab -->
+            <div id="tab-mine" class="tab-pane">
+                <div class="empty-state">
+                    <ion-icon name="person-outline"></ion-icon>
+                    <p>我的功能开发中...</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- The Add Transaction Modal -->
+        <div id="addModal" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header" id="addModalHeader">
+                    <button id="closeModalBtn" class="icon-btn"><ion-icon name="close-outline"></ion-icon></button>
+                    <!-- Type Selector (Income/Expense) -->
+                    <div class="type-toggle" id="modalTypeToggle">
+                        <button class="type-btn active" data-type="expense">支出</button>
+                        <button class="type-btn" data-type="income">收入</button>
+                    </div>
+                    <!-- Submit Checkmark -->
+                    <button id="submitTxBtn" class="icon-btn" style="color: var(--accent);"><ion-icon
+                            name="checkmark-outline"></ion-icon></button>
+                </div>
+
+                <div class="modal-body add-tx-body">
+                    <!-- Note Input Area -->
+                    <div class="note-input-container">
+                        <ion-icon name="create-outline"></ion-icon>
+                        <input type="text" id="txNote" class="note-input" placeholder="输入备注（可选）..." autocomplete="off">
+                    </div>
+
+                    <div class="divider-horizontal" style="margin: 0 0 20px 0;"></div>
+
+                    <!-- Step 1: Category Grid -->
+                    <div id="stepCategory">
+                        <!-- Category Grid (Expense) -->
+                        <div class="category-grid" id="expenseCategories">
+                            <div class="category-item active">
+                                <div class="cat-icon"><ion-icon name="restaurant-outline"></ion-icon></div>
+                                <span>餐饮</span>
+                            </div>
+                            <div class="category-item">
+                                <div class="cat-icon"><ion-icon name="bus-outline"></ion-icon></div>
+                                <span>交通</span>
+                            </div>
+                            <div class="category-item">
+                                <div class="cat-icon"><ion-icon name="cart-outline"></ion-icon></div>
+                                <span>购物</span>
+                            </div>
+                            <div class="category-item">
+                                <div class="cat-icon"><ion-icon name="home-outline"></ion-icon></div>
+                                <span>居住</span>
+                            </div>
+                            <div class="category-item">
+                                <div class="cat-icon"><ion-icon name="game-controller-outline"></ion-icon></div>
+                                <span>娱乐</span>
+                            </div>
+                            <div class="category-item">
+                                <div class="cat-icon"><ion-icon name="medkit-outline"></ion-icon></div>
+                                <span>医疗</span>
+                            </div>
+                            <div class="category-item">
+                                <div class="cat-icon"><ion-icon name="book-outline"></ion-icon></div>
+                                <span>教育</span>
+                            </div>
+                            <div class="category-item">
+                                <div class="cat-icon"><ion-icon name="ellipsis-horizontal-outline"></ion-icon></div>
+                                <span>其他</span>
+                            </div>
+                        </div>
+
+                        <!-- Category Grid (Income) - Hidden by default -->
+                        <div class="category-grid hidden" id="incomeCategories">
+                            <div class="category-item">
+                                <div class="cat-icon"><ion-icon name="cash-outline"></ion-icon></div>
+                                <span>薪水</span>
+                            </div>
+                            <div class="category-item">
+                                <div class="cat-icon"><ion-icon name="trending-up-outline"></ion-icon></div>
+                                <span>理财</span>
+                            </div>
+                            <div class="category-item">
+                                <div class="cat-icon"><ion-icon name="gift-outline"></ion-icon></div>
+                                <span>礼金</span>
+                            </div>
+                            <div class="category-item">
+                                <div class="cat-icon"><ion-icon name="ellipsis-horizontal-outline"></ion-icon></div>
+                                <span>其他</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Amount Input & Keypad (Hidden initially) -->
+                    <div id="stepAmount" class="hidden">
+                        <div class="amount-display-container">
+                            <div class="selected-cat-info" id="backToCatBtn" style="cursor: pointer;" title="点击重选分类">
+                                <div class="cat-icon small"><ion-icon id="selectedCatIcon"
+                                        name="restaurant-outline"></ion-icon></div>
+                                <span id="selectedCatName">餐饮</span>
+                                <ion-icon name="chevron-down-outline"
+                                    style="font-size: 14px; margin-left: 4px; color: var(--text-secondary);"></ion-icon>
+                            </div>
+                            <div class="amount-value" id="amountDisplay">0.00</div>
+                        </div>
+
+                        <div class="divider-horizontal" style="margin: 15px 0;"></div>
+
+                        <div class="keypad-toolbar">
+                            <div class="keypad-date-selector">
+                                <input type="date" id="keypadDateInput" class="hidden-date-input">
+                                <ion-icon name="calendar-outline"></ion-icon>
+                                <span id="keypadDateDisplay">今天</span>
+                            </div>
+                            <div>
+                                <button id="delTxBtn" class="text-btn"
+                                    style="color: #ff3b30; display: none;">删除</button>
+                            </div>
+                        </div>
+
+                        <div class="keypad-grid">
+                            <button class="key-btn num-key">1</button>
+                            <button class="key-btn num-key">2</button>
+                            <button class="key-btn num-key">3</button>
+                            <button class="key-btn action-key" id="keyDelete"><ion-icon
+                                    name="backspace-outline"></ion-icon></button>
+
+                            <button class="key-btn num-key">4</button>
+                            <button class="key-btn num-key">5</button>
+                            <button class="key-btn num-key">6</button>
+                            <button class="key-btn action-key num-operator">+</button>
+
+                            <button class="key-btn num-key">7</button>
+                            <button class="key-btn num-key">8</button>
+                            <button class="key-btn num-key">9</button>
+                            <button class="key-btn action-key num-operator">-</button>
+
+                            <button class="key-btn action-key" id="keyClear">C</button>
+                            <button class="key-btn num-key">0</button>
+                            <button class="key-btn num-key">.</button>
+                            <button class="key-btn submit-key" id="keySubmit">完成</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <a href="#" class="nav-item active" data-tab="tab-details">
+                <ion-icon name="reader-outline"></ion-icon>
+                <span>明细</span>
+            </a>
+            <a href="#" class="nav-item" data-tab="tab-charts">
+                <ion-icon name="pie-chart-outline"></ion-icon>
+                <span>图表</span>
+            </a>
+            <div class="nav-item fab-container" id="fabBtn">
+                <button class="fab-button">
+                    <ion-icon name="add-outline"></ion-icon>
+                </button>
+                <span>记账</span>
+            </div>
+            <a href="#" class="nav-item" data-tab="tab-assets">
+                <ion-icon name="wallet-outline"></ion-icon>
+                <span>资产</span>
+            </a>
+            <a href="#" class="nav-item" data-tab="tab-mine">
+                <ion-icon name="person-outline"></ion-icon>
+                <span>我的</span>
+            </a>
+        </nav>
+    </div>
+    <script src="app.js"></script>
+</body>
+
+</html>
