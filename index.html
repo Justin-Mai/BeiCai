@@ -9,6 +9,8 @@
     <!-- Ionicons for beautiful simple icons -->
     <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    <!-- ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
@@ -60,10 +62,27 @@
             </div>
 
             <!-- 2. Charts Tab -->
-            <div id="tab-charts" class="tab-pane">
-                <div class="empty-state">
-                    <ion-icon name="pie-chart-outline"></ion-icon>
-                    <p>图表功能开发中...</p>
+            <div id="tab-charts" class="tab-pane" style="padding: 15px 0;">
+                <!-- 时间维度切换器 (大圆角居中) -->
+                <div class="timeframe-selector">
+                    <button class="time-btn active" data-time="week">周</button>
+                    <button class="time-btn" data-time="month">月</button>
+                    <button class="time-btn" data-time="quarter">季</button>
+                    <button class="time-btn" data-time="year">年</button>
+                </div>
+                
+                <!-- 次级时间横向滑动栏 (本周、上周等) -->
+                <div id="subTimeScroll" class="sub-time-scroll-container">
+                    <!-- 动态生成 -->
+                </div>
+
+                <!-- 图表容器 -->
+                <div style="padding: 0 15px;">
+                    <h3 class="chart-title">支出分类占比</h3>
+                    <div id="expensePieChart" class="chart-container"></div>
+                    
+                    <h3 class="chart-title" style="margin-top: 20px;">结余趋势</h3>
+                    <div id="trendChart" class="chart-container"></div>
                 </div>
             </div>
 
@@ -94,9 +113,8 @@
                         <button class="type-btn active" data-type="expense">支出</button>
                         <button class="type-btn" data-type="income">收入</button>
                     </div>
-                    <!-- Submit Checkmark -->
-                    <button id="submitTxBtn" class="icon-btn" style="color: var(--accent);"><ion-icon
-                            name="checkmark-outline"></ion-icon></button>
+                    <!-- Empty div to balance flex space -->
+                    <div style="width: 32px;"></div>
                 </div>
 
                 <div class="modal-body add-tx-body">
@@ -112,58 +130,12 @@
                     <div id="stepCategory">
                         <!-- Category Grid (Expense) -->
                         <div class="category-grid" id="expenseCategories">
-                            <div class="category-item active">
-                                <div class="cat-icon"><ion-icon name="restaurant-outline"></ion-icon></div>
-                                <span>餐饮</span>
-                            </div>
-                            <div class="category-item">
-                                <div class="cat-icon"><ion-icon name="bus-outline"></ion-icon></div>
-                                <span>交通</span>
-                            </div>
-                            <div class="category-item">
-                                <div class="cat-icon"><ion-icon name="cart-outline"></ion-icon></div>
-                                <span>购物</span>
-                            </div>
-                            <div class="category-item">
-                                <div class="cat-icon"><ion-icon name="home-outline"></ion-icon></div>
-                                <span>居住</span>
-                            </div>
-                            <div class="category-item">
-                                <div class="cat-icon"><ion-icon name="game-controller-outline"></ion-icon></div>
-                                <span>娱乐</span>
-                            </div>
-                            <div class="category-item">
-                                <div class="cat-icon"><ion-icon name="medkit-outline"></ion-icon></div>
-                                <span>医疗</span>
-                            </div>
-                            <div class="category-item">
-                                <div class="cat-icon"><ion-icon name="book-outline"></ion-icon></div>
-                                <span>教育</span>
-                            </div>
-                            <div class="category-item">
-                                <div class="cat-icon"><ion-icon name="ellipsis-horizontal-outline"></ion-icon></div>
-                                <span>其他</span>
-                            </div>
+                            <!-- 动态渲染 -->
                         </div>
 
                         <!-- Category Grid (Income) - Hidden by default -->
                         <div class="category-grid hidden" id="incomeCategories">
-                            <div class="category-item">
-                                <div class="cat-icon"><ion-icon name="cash-outline"></ion-icon></div>
-                                <span>薪水</span>
-                            </div>
-                            <div class="category-item">
-                                <div class="cat-icon"><ion-icon name="trending-up-outline"></ion-icon></div>
-                                <span>理财</span>
-                            </div>
-                            <div class="category-item">
-                                <div class="cat-icon"><ion-icon name="gift-outline"></ion-icon></div>
-                                <span>礼金</span>
-                            </div>
-                            <div class="category-item">
-                                <div class="cat-icon"><ion-icon name="ellipsis-horizontal-outline"></ion-icon></div>
-                                <span>其他</span>
-                            </div>
+                            <!-- 动态渲染 -->
                         </div>
                     </div>
 
@@ -188,18 +160,15 @@
                                 <ion-icon name="calendar-outline"></ion-icon>
                                 <span id="keypadDateDisplay">今天</span>
                             </div>
-                            <div>
-                                <button id="delTxBtn" class="text-btn"
-                                    style="color: #ff3b30; display: none;">删除</button>
-                            </div>
+                            <!-- 占位以保持 flex space-between -->
+                            <div></div>
                         </div>
 
-                        <div class="keypad-grid">
+                        <div class="keypad-grid" style="grid-auto-rows: 46px;">
                             <button class="key-btn num-key">1</button>
                             <button class="key-btn num-key">2</button>
                             <button class="key-btn num-key">3</button>
-                            <button class="key-btn action-key" id="keyDelete"><ion-icon
-                                    name="backspace-outline"></ion-icon></button>
+                            <button class="key-btn action-key" id="keyDelete"><ion-icon name="backspace-outline"></ion-icon></button>
 
                             <button class="key-btn num-key">4</button>
                             <button class="key-btn num-key">5</button>
@@ -214,7 +183,13 @@
                             <button class="key-btn action-key" id="keyClear">C</button>
                             <button class="key-btn num-key">0</button>
                             <button class="key-btn num-key">.</button>
-                            <button class="key-btn submit-key" id="keySubmit">完成</button>
+                            <button class="key-btn action-key num-operator">×</button>
+                        </div>
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <button class="key-btn submit-key" id="keySubmitAnother" style="flex: 1; height: 50px;">再记</button>
+                            <!-- 编辑模式下专用的删除操作按钮 -->
+                            <button class="key-btn" id="keyDeleteTxButton" style="flex: 1; height: 50px; background-color: #ff3b30; color: white; border-radius: 8px; display: none;">删除</button>
+                            <button class="key-btn submit-key" id="keySubmit" style="flex: 1; height: 50px;">完成</button>
                         </div>
                     </div>
 
@@ -248,7 +223,7 @@
             </a>
         </nav>
     </div>
-    <script src="app.js"></script>
+    <script type="module" src="js/main.js"></script>
 </body>
 
 </html>
