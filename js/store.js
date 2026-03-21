@@ -4,8 +4,10 @@
  */
 
 const STORAGE_KEY = 'beicai_transactions';
+const ACCOUNTS_KEY = 'beicai_accounts';
 
 let flatTransactions = [];
+let accounts = [];
 
 /**
  * 获取星期几
@@ -142,4 +144,49 @@ export function deleteTransaction(id) {
  */
 export function findTransaction(id) {
     return flatTransactions.find(t => t.id === parseInt(id, 10));
+}
+
+/**
+ * 加载账户数据
+ */
+export function loadAccounts() {
+    const saved = localStorage.getItem(ACCOUNTS_KEY);
+    if (saved) {
+        accounts = JSON.parse(saved);
+    } else {
+        // 注入演示账户
+        accounts = [
+            { id: 'acc_1', name: '现金', type: 'cash', balance: 500.00, icon: 'wallet-outline', color: '#000000' },
+            { id: 'acc_2', name: '招商银行', type: 'bank', balance: 12500.50, icon: 'card-outline', color: '#333333' },
+            { id: 'acc_3', name: '支付宝', type: 'virtual', balance: 3200.00, icon: 'logo-alipay', color: '#666666' },
+            { id: 'acc_4', name: '微信支付', type: 'virtual', balance: 850.20, icon: 'logo-wechat', color: '#999999' },
+            { id: 'acc_5', name: '蚂蚁花呗', type: 'credit', balance: -1200.00, icon: 'layers-outline', color: '#000000' }
+        ];
+        localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+    }
+    return accounts;
+}
+
+/**
+ * 获取资产汇总
+ */
+export function getAssetsSummary() {
+    if (accounts.length === 0) loadAccounts();
+    
+    let totalAssets = 0;
+    let totalLiabilities = 0;
+
+    accounts.forEach(acc => {
+        if (acc.balance >= 0) {
+            totalAssets += acc.balance;
+        } else {
+            totalLiabilities += Math.abs(acc.balance);
+        }
+    });
+
+    return {
+        totalAssets: totalAssets.toFixed(2),
+        totalLiabilities: totalLiabilities.toFixed(2),
+        netAssets: (totalAssets - totalLiabilities).toFixed(2)
+    };
 }

@@ -1,7 +1,10 @@
-import { EXPENSE_CATEGORIES } from './categories.js';
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from './categories.js';
 
 let expensePieChart = null;
 let trendChart = null;
+
+let currentPieType = 'expense'; // 'expense' or 'income'
+let currentRankingType = 'expense'; // 'expense' or 'income'
 
 export function initCharts() {
     const pieDom = document.getElementById('expensePieChart');
@@ -17,6 +20,36 @@ export function initCharts() {
     window.addEventListener('resize', () => {
         if (expensePieChart) expensePieChart.resize();
         if (trendChart) trendChart.resize();
+    });
+
+    // 绑定切换事件
+    initToggleEvents();
+}
+
+function initToggleEvents() {
+    const pieToggles = [document.getElementById('pieToggleExpense'), document.getElementById('pieToggleIncome')];
+    const rankToggles = [document.getElementById('rankToggleExpense'), document.getElementById('rankToggleIncome')];
+
+    pieToggles.forEach(el => {
+        if (!el) return;
+        el.addEventListener('click', () => {
+            pieToggles.forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+            currentPieType = el.getAttribute('data-type');
+            // 重新刷新数据 (需要全局数据及范围，这块可以通过触发某种 refresh 实现)
+            // 简单处理：全局分发或在 main.js 里处理更好的引用
+            window.dispatchEvent(new CustomEvent('chart-type-changed'));
+        });
+    });
+
+    rankToggles.forEach(el => {
+        if (!el) return;
+        el.addEventListener('click', () => {
+            rankToggles.forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+            currentRankingType = el.getAttribute('data-type');
+            window.dispatchEvent(new CustomEvent('chart-type-changed'));
+        });
     });
 }
 
@@ -216,7 +249,7 @@ function generatePeriods(timeframe, flatTransactions) {
     return periods;
 }
 
-export function renderSubTimeframe(timeframe, flatTransactions, onSelect) {
+export function renderSubTimeframe(timeframe, flatTransactions, onSelect, shouldScroll = true) {
     const container = document.getElementById('subTimeScroll');
     if (!container) return;
     
@@ -235,13 +268,16 @@ export function renderSubTimeframe(timeframe, flatTransactions, onSelect) {
         </div>
     `).join('');
     
-    // Auto scroll to active item
-    setTimeout(() => {
-        const activeItem = container.querySelector('.sub-time-item.active');
-        if (activeItem) {
-            activeItem.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
-        }
-    }, 10);
+    // Auto scroll to active item (Only if permitted and not already in view)
+    if (shouldScroll) {
+        setTimeout(() => {
+            const activeItem = container.querySelector('.sub-time-item.active');
+            if (activeItem) {
+                // Use behavior: 'auto' and block: 'nearest' to minimize impact
+                activeItem.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+            }
+        }, 10);
+    }
     
     // Binding
     container.querySelectorAll('.sub-time-item').forEach(el => {
@@ -263,10 +299,10 @@ export function renderSubTimeframe(timeframe, flatTransactions, onSelect) {
 
 // ============== 图表绘制 ==============
 
-function buildPieData(filteredTx) {
+function buildPieData(filteredTx, type = 'expense') {
     const catMap = {};
     filteredTx.forEach(t => {
-        if (t.type === 'expense') {
+        if (t.type === type) {
             catMap[t.title] = (catMap[t.title] || 0) + parseFloat(t.amount);
         }
     });
@@ -285,11 +321,18 @@ export function updateChartsDataByRange(allFlatTransactions, rangeObj) {
     
     const dateSummaryObj = document.getElementById('chartDateSummary');
     if (dateSummaryObj) dateSummaryObj.textContent = rangeObj.label;
+
+    const rankingContainer = document.getElementById('categoryRankingList');
+    if (rankingContainer) rankingContainer.innerHTML = '';
     
     let filteredTx = [];
     let xAxisData = [];
     let incomeSeries = [];
     let expenseSeries = [];
+    
+    let totalRangeIncome = 0;
+    let totalRangeExpense = 0;
+
 
     // ====== 1. 根据 rangeObj 构建 X 轴与过滤数据 ======
     if (rangeObj.type === 'daily') {
@@ -332,8 +375,24 @@ export function updateChartsDataByRange(allFlatTransactions, rangeObj) {
         });
     }
 
+    // ====== 1.5 计算并更新顶部汇总数据 ======
+    filteredTx.forEach(t => {
+        if (t.type === 'income') totalRangeIncome += parseFloat(t.amount);
+        else totalRangeExpense += parseFloat(t.amount);
+    });
+
+    const incomeEl = document.getElementById('totalRangeIncome');
+    const expenseEl = document.getElementById('totalRangeExpense');
+    const balanceEl = document.getElementById('totalRangeBalance');
+
+    if (incomeEl) incomeEl.textContent = totalRangeIncome.toFixed(2);
+    if (expenseEl) expenseEl.textContent = totalRangeExpense.toFixed(2);
+    if (balanceEl) balanceEl.textContent = (totalRangeIncome - totalRangeExpense).toFixed(2);
+
+
     // ====== 2. 更新分类饼状图 ======
-    const pieData = buildPieData(filteredTx);
+    const pieData = buildPieData(filteredTx, currentPieType);
+    const displayTotal = currentPieType === 'expense' ? totalRangeExpense : totalRangeIncome;
     
     const pieOption = {
         tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
@@ -344,10 +403,23 @@ export function updateChartsDataByRange(allFlatTransactions, rangeObj) {
             itemHeight: 10,
             textStyle: { fontSize: 12, color: '#666' }
         },
-        color: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7CAC9', '#92A8D1', '#034F84'],
+        color: pieData.map((item, index) => {
+            // 占比越多越深 (More share -> Darker)
+            // 按照种类数平分灰度梯度 (Even distribution based on rank)
+            const count = pieData.length;
+            if (count <= 1) return '#000'; // 唯一项设为黑色
+            
+            // 0 是最大占比 -> 最深 (0)
+            // count-1 是最小占比 -> 最浅 (220)
+            const grayValue = Math.floor(0 + (index / (count - 1)) * (220 - 0));
+            
+            const hex = grayValue.toString(16).padStart(2, '0');
+            return `#${hex}${hex}${hex}`;
+        }),
         series: [
             {
                 type: 'pie',
+                name: currentPieType === 'expense' ? '支出分类' : '收入来源',
                 radius: ['40%', '70%'],
                 center: ['50%', '42%'],
                 avoidLabelOverlap: false,
@@ -361,7 +433,45 @@ export function updateChartsDataByRange(allFlatTransactions, rangeObj) {
     };
     expensePieChart.setOption(pieOption);
 
-    // ====== 3. 更新趋势对比柱状图/折线图 ======
+    // ====== 3.5 渲染排行榜 ======
+    const rankingData = buildPieData(filteredTx, currentRankingType);
+    const rankingTotal = currentRankingType === 'expense' ? totalRangeExpense : totalRangeIncome;
+
+    if (rankingContainer) {
+        if (rankingData.length === 0 || (rankingData.length === 1 && rankingData[0].value === 0)) {
+            rankingContainer.innerHTML = '<div class="empty-state" style="padding: 20px 0;">暂无数据</div>';
+        } else {
+            const listHtml = rankingData.map((item, index) => {
+                const percent = rankingTotal > 0 ? ((item.value / rankingTotal) * 100).toFixed(1) : '0.0';
+                // 查找对应分类的图标
+                const cats = currentRankingType === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+                const catInfo = cats.find(c => c.name === item.name) || { icon: 'help-outline' };
+                
+                return `
+                    <div class="ranking-item">
+                        <div class="ranking-icon">
+                            <ion-icon name="${catInfo.icon}"></ion-icon>
+                        </div>
+                        <div class="ranking-info">
+                            <div class="ranking-top-row">
+                                <span class="ranking-name">${item.name}</span>
+                                <div class="ranking-amount-box">
+                                    <span class="ranking-amount">${item.value}</span>
+                                    <span class="ranking-percent">${percent}%</span>
+                                </div>
+                            </div>
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar-fill" style="width: ${percent}%; background: ${currentRankingType === 'expense' ? '#111' : '#8e8e93'}"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            rankingContainer.innerHTML = listHtml;
+        }
+    }
+
+    // ====== 4. 更新趋势对比柱状图/折线图 ======
     const trendOption = {
         tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
         legend: {
