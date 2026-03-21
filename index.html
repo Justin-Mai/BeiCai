@@ -76,21 +76,56 @@
                     <!-- 动态生成 -->
                 </div>
 
+                <!-- 统计汇总卡片 -->
+                <div class="statistics-summary">
+                    <div class="stat-item">
+                        <span class="stat-label">总支出</span>
+                        <span class="stat-value expense" id="totalRangeExpense">0.00</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">总收入</span>
+                        <span class="stat-value income" id="totalRangeIncome">0.00</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">结余</span>
+                        <span class="stat-value balance" id="totalRangeBalance">0.00</span>
+                    </div>
+                </div>
+
                 <!-- 图表容器 -->
                 <div style="padding: 0 15px;">
-                    <h3 class="chart-title">支出分类占比</h3>
+                    <div class="chart-header-toggle">
+                        <h3 class="chart-title active" data-type="expense" id="pieToggleExpense">支出分类占比</h3>
+                        <h3 class="chart-title" data-type="income" id="pieToggleIncome">收入分类占比</h3>
+                    </div>
                     <div id="expensePieChart" class="chart-container"></div>
                     
                     <h3 class="chart-title" style="margin-top: 20px;">结余趋势</h3>
                     <div id="trendChart" class="chart-container"></div>
+
+                    <!-- 支出排行榜 -->
+                    <div class="ranking-section" style="margin-top: 30px; margin-bottom: 30px;">
+                        <div class="chart-header-toggle" style="margin-bottom: 12px;">
+                            <h3 class="chart-title active" data-type="expense" id="rankToggleExpense">支出排行榜</h3>
+                            <h3 class="chart-title" data-type="income" id="rankToggleIncome">收入排行榜</h3>
+                        </div>
+                        <div id="categoryRankingList" class="ranking-list">
+                            <!-- 动态渲染 -->
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- 4. Assets Tab (Skipping 3 which is the Add button) -->
+            <!-- 4. Assets Tab -->
             <div id="tab-assets" class="tab-pane">
-                <div class="empty-state">
-                    <ion-icon name="wallet-outline"></ion-icon>
-                    <p>资产功能开发中...</p>
+                <!-- 资产总览卡片 -->
+                <div class="assets-overview" id="assetsOverview">
+                    <!-- 动态渲染 -->
+                </div>
+
+                <!-- 账户列表 -->
+                <div class="account-list-container" id="accountList">
+                    <!-- 动态渲染 -->
                 </div>
             </div>
 

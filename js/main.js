@@ -10,6 +10,7 @@ import {
     openModalForEdit
 } from './ui.js';
 import { initCharts, triggerChartResize, initTimeframeSelector, renderSubTimeframe, updateChartsDataByRange } from './charts.js';
+import { renderAssets } from './assets.js';
 
 let currentSelectedMonth = "";
 let currentTimeframe = "week"; // default
@@ -43,6 +44,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 triggerChartResize();
                 refreshCharts();
             });
+        } else if (targetTabId === 'tab-assets') {
+            renderAssets();
         }
     });
 
@@ -66,6 +69,11 @@ document.addEventListener('DOMContentLoaded', () => {
         refreshCharts();
     });
 
+    // 监听收支维度切换
+    window.addEventListener('chart-type-changed', () => {
+        refreshCharts(false);
+    });
+
     // 6. Initial Load
     refreshDataAndUI();
 });
@@ -74,15 +82,16 @@ function refreshDataAndUI() {
     const { groupedData, monthIncome, monthExpense } = loadTransactions(currentSelectedMonth);
     renderTransactions(groupedData);
     updateHeaderSummary(monthIncome, monthExpense);
+    renderAssets();
 }
 
-function refreshCharts() {
+function refreshCharts(shouldScroll = true) {
     const { flatTransactions } = loadTransactions(currentSelectedMonth); 
     // 渲染滑动条并拉取激活的具体日期边界
     const activeRangeObj = renderSubTimeframe(currentTimeframe, flatTransactions, (newRangeObj) => {
         // 当滑动条子项被点击时重新绘制
         updateChartsDataByRange(flatTransactions, newRangeObj);
-    });
+    }, shouldScroll);
     // 首次绘制
     if (activeRangeObj) {
         updateChartsDataByRange(flatTransactions, activeRangeObj);
