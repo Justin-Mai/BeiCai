@@ -11,6 +11,7 @@ import {
 } from './ui.js';
 import { initCharts, triggerChartResize, initTimeframeSelector, renderSubTimeframe, updateChartsDataByRange } from './charts.js';
 import { renderAssets } from './assets.js';
+import { renderMineTab } from './mine.js';
 
 let currentSelectedMonth = "";
 let currentTimeframe = "week"; // default
@@ -46,6 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         } else if (targetTabId === 'tab-assets') {
             renderAssets();
+        } else if (targetTabId === 'tab-mine') {
+            renderMineTab();
         }
     });
 
