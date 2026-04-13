@@ -127,13 +127,106 @@
                 <div class="account-list-container" id="accountList">
                     <!-- 动态渲染 -->
                 </div>
+
+                <!-- 添加资产按钮容器 -->
+                <div class="add-account-container">
+                    <button class="add-account-btn" id="addAccountBtn">
+                        <ion-icon name="add-outline"></ion-icon>
+                        <span>添加资产</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 资产详情页 (全屏覆盖层) -->
+            <div id="assetDetailsPage" class="full-page-overlay hidden">
+                <header class="sub-header black-white">
+                    <button id="closeAssetDetails" class="icon-btn"><ion-icon name="arrow-back-outline"></ion-icon></button>
+                    <div class="header-title">资产详情</div>
+                    <div class="header-right-actions">
+                        <button class="icon-btn"><ion-icon name="ellipsis-horizontal"></ion-icon></button>
+                    </div>
+                </header>
+                
+                <div class="overlay-content scrollable">
+                    <!-- 资产卡片动态渲染 -->
+                    <div id="assetDetailCardContainer"></div>
+
+                    <!-- 收支明细列表 -->
+                    <div class="detail-section">
+                        <div class="section-header">
+                            <span>收支明细</span>
+                            <div class="month-selector-small">
+                                <span id="assetDetailMonth">2026年03月</span>
+                                <ion-icon name="caret-down-outline"></ion-icon>
+                            </div>
+                        </div>
+                        <div id="assetTransactionList" class="asset-transaction-list">
+                            <!-- 动态渲染 -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 底部操作栏 -->
+                <div class="asset-footer-actions">
+                    <button class="footer-action-item delete" id="deleteAssetBtn">
+                        <ion-icon name="trash-outline"></ion-icon>
+                        <span>删除资产</span>
+                    </button>
+                    <div class="action-divider"></div>
+                    <button class="footer-action-item" id="adjustBalanceBtnFooter">
+                        <ion-icon name="options-outline"></ion-icon>
+                        <span>调整余额</span>
+                    </button>
+                </div>
             </div>
 
             <!-- 5. Mine Tab -->
             <div id="tab-mine" class="tab-pane">
-                <div class="empty-state">
-                    <ion-icon name="person-outline"></ion-icon>
-                    <p>我的功能开发中...</p>
+                <!-- User Profile Header -->
+                <div class="mine-header" id="editProfileBtn" style="cursor: pointer; position: relative;">
+                    <div class="user-avatar" id="userAvatarContainer">
+                        <ion-icon name="happy-outline"></ion-icon>
+                    </div>
+                    <div class="user-info">
+                        <h2 id="userNameDisplay">极简达人</h2>
+                        <p id="userSloganDisplay">简单记账，掌控生活</p>
+                    </div>
+                    <div style="position: absolute; right: 20px; color: #999;">
+                        <ion-icon name="create-outline" style="font-size: 24px;"></ion-icon>
+                    </div>
+                </div>
+
+                <!-- Statistics Cards -->
+                <div class="mine-stats">
+                    <div class="stat-card">
+                        <div class="stat-num" id="daysUsedCount">0</div>
+                        <div class="stat-label">记账天数 (天)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-num" id="consecutiveDaysCount">0</div>
+                        <div class="stat-label">连续打卡 (天)</div>
+                    </div>
+                </div>
+
+                <!-- Action Menu -->
+                <div class="mine-menu">
+                    <div class="menu-item" id="exportDataBtn">
+                        <ion-icon name="download-outline"></ion-icon>
+                        <span class="menu-text">导出备份账单</span>
+                        <ion-icon name="chevron-forward-outline" class="menu-arrow"></ion-icon>
+                    </div>
+                    <div class="menu-item" id="importDataBtn">
+                        <ion-icon name="push-outline"></ion-icon>
+                        <span class="menu-text">导入备份账单</span>
+                        <ion-icon name="chevron-forward-outline" class="menu-arrow"></ion-icon>
+                        <input type="file" id="importFileInput" style="display: none;" accept=".json">
+                    </div>
+                    <div class="menu-item" id="exchangeRateBtn">
+                        <ion-icon name="earth-outline"></ion-icon>
+                        <span class="menu-text">外汇汇率设置</span>
+                        <span class="menu-val" id="exchangeRateInfo">Loading...</span>
+                        <ion-icon name="chevron-forward-outline" class="menu-arrow"></ion-icon>
+                    </div>
                 </div>
             </div>
         </main>
@@ -228,6 +321,96 @@
                         </div>
                     </div>
 
+                </div>
+            </div>
+        </div>
+
+        <!-- 资产表单模态框 (新增/编辑平衡) -->
+        <div id="assetModal" class="modal-overlay">
+            <div class="modal-content" style="height: auto; min-height: 40vh;">
+                <div class="modal-header">
+                    <button id="closeAssetModal" class="icon-btn"><ion-icon name="close-outline"></ion-icon></button>
+                    <div id="assetModalTitle">添加资产</div>
+                    <div style="width: 32px;"></div>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label style="display: block; font-size: 14px; color: #888; margin-bottom: 8px;">资产名称</label>
+                        <input type="text" id="assetNameInput" style="width: 100%; padding: 12px; border: 1.5px solid #000; border-radius: 8px; font-size: 16px;" placeholder="例如：招商银行">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label style="display: block; font-size: 14px; color: #888; margin-bottom: 8px;">资产类型</label>
+                        <select id="assetTypeInput" style="width: 100%; padding: 12px; border: 1.5px solid #000; border-radius: 8px; font-size: 16px; background: #fff;">
+                            <option value="cash">资金账户 (现金/零钱)</option>
+                            <option value="bank" selected>银行卡</option>
+                            <option value="virtual">虚拟账户 (支付宝/微信)</option>
+                            <option value="credit">负债 (信用卡/花呗)</option>
+                            <option value="investment">投资理财</option>
+                            <option value="foreign_exchange">外汇 (港美股/加密货币)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 30px;">
+                        <label style="display: block; font-size: 14px; color: #888; margin-bottom: 8px;">当前余额</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="number" id="assetBalanceInput" step="0.01" style="flex: 1; min-width: 0; padding: 12px; border: 1.5px solid #000; border-radius: 8px; font-size: 16px;" placeholder="0.00">
+                            <select id="assetCurrencyInput" style="display: none; width: 90px; padding: 12px; border: 1.5px solid #000; border-radius: 8px; font-size: 16px; background: #fff;">
+                                <option value="CNY">CNY</option>
+                                <option value="HKD">HKD</option>
+                                <option value="USD">USD</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button id="saveAssetBtn" style="width: 100%; padding: 16px; background: #000; color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 700;">保存</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 编辑个人信息模态框 -->
+        <div id="profileModal" class="modal-overlay">
+            <div class="modal-content" style="height: auto; min-height: 30vh;">
+                <div class="modal-header">
+                    <button id="closeProfileModal" class="icon-btn"><ion-icon name="close-outline"></ion-icon></button>
+                    <div class="header-title">编辑个人资料</div>
+                    <div style="width: 32px;"></div>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label style="display: block; font-size: 14px; color: #888; margin-bottom: 8px;">头像 (仅支持输入1个Emoji表情)</label>
+                        <input type="text" id="avatarInput" maxlength="2" style="width: 100%; padding: 12px; border: 1.5px solid #000; border-radius: 8px; font-size: 24px; text-align: center;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label style="display: block; font-size: 14px; color: #888; margin-bottom: 8px;">昵称</label>
+                        <input type="text" id="nameInput" style="width: 100%; padding: 12px; border: 1.5px solid #000; border-radius: 8px; font-size: 16px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 30px;">
+                        <label style="display: block; font-size: 14px; color: #888; margin-bottom: 8px;">个性签名</label>
+                        <input type="text" id="sloganInput" style="width: 100%; padding: 12px; border: 1.5px solid #000; border-radius: 8px; font-size: 16px;">
+                    </div>
+                    <button id="saveProfileBtn" style="width: 100%; padding: 16px; background: #000; color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 700;">保存资料</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 外汇设置模态框 -->
+        <div id="exchangeRateModal" class="modal-overlay">
+            <div class="modal-content" style="height: auto; min-height: 40vh;">
+                <div class="modal-header">
+                    <button id="closeExchangeRateModal" class="icon-btn"><ion-icon name="close-outline"></ion-icon></button>
+                    <div class="header-title">配置参考汇率</div>
+                    <button id="autoUpdateRateBtn" class="text-btn" style="font-size: 14px; font-weight: 600; color: #000;">自动获取</button>
+                </div>
+                <div class="modal-body">
+                    <p style="font-size: 13px; color: #666; margin-bottom: 20px;">设置对应人民币 (CNY) 的大致汇率。<br>例如：1 USD = 7.20 CNY。此汇率将用于总资产的粗略折算。</p>
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label style="display: block; font-size: 14px; color: #888; margin-bottom: 8px;">美元 (USD) 汇率</label>
+                        <input type="number" id="usdRateInput" step="0.0001" style="width: 100%; padding: 12px; border: 1.5px solid #000; border-radius: 8px; font-size: 16px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 30px;">
+                        <label style="display: block; font-size: 14px; color: #888; margin-bottom: 8px;">港币 (HKD) 汇率</label>
+                        <input type="number" id="hkdRateInput" step="0.0001" style="width: 100%; padding: 12px; border: 1.5px solid #000; border-radius: 8px; font-size: 16px;">
+                    </div>
+                    <button id="saveExchangeRateBtn" style="width: 100%; padding: 16px; background: #000; color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 700;">保存设置</button>
+                    <p id="rateUpdateStatus" style="font-size: 12px; color: #666; text-align: center; margin-top: 15px; height: 16px;"></p>
                 </div>
             </div>
         </div>

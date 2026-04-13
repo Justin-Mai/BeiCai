@@ -34,9 +34,10 @@ function sortTransactions() {
 /**
  * 加载交易数据并按月份分组
  * @param {string} currentSelectedMonth - 当前选择的月份 YYYY-MM
+ * @param {string} filterAccountId - 可选：按账户 ID 过滤
  * @returns {{ flatTransactions: Array, groupedData: Array, monthIncome: number, monthExpense: number }}
  */
-export function loadTransactions(currentSelectedMonth) {
+export function loadTransactions(currentSelectedMonth, filterAccountId = null) {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
         flatTransactions = JSON.parse(saved);
@@ -84,26 +85,33 @@ export function loadTransactions(currentSelectedMonth) {
     }
 
     flatTransactions.forEach(t => {
-        if (t.date.startsWith(currentSelectedMonth)) {
-            if (!grouped[t.date]) {
-                grouped[t.date] = {
-                    date: t.date,
-                    day: getDayOfWeek(t.date),
-                    income: 0,
-                    expense: 0,
-                    transactions: []
-                };
-            }
+        // 过滤账户
+        if (filterAccountId && t.accountId !== filterAccountId) return;
 
-            grouped[t.date].transactions.push(t);
+        // 如果没有明确指定账户，说明是在总账明细页，此时过滤掉“余额调整”记录，使其不影响主页明细
+        if (!filterAccountId && t.isAdjustment) return;
 
-            if (t.type === 'income') {
-                grouped[t.date].income += parseFloat(t.amount);
-                monthIncome += parseFloat(t.amount);
-            } else {
-                grouped[t.date].expense += parseFloat(t.amount);
-                monthExpense += parseFloat(t.amount);
-            }
+        // 过滤月份 (如果提供了月份)
+        if (currentSelectedMonth && !t.date.startsWith(currentSelectedMonth)) return;
+
+        if (!grouped[t.date]) {
+            grouped[t.date] = {
+                date: t.date,
+                day: getDayOfWeek(t.date),
+                income: 0,
+                expense: 0,
+                transactions: []
+            };
+        }
+
+        grouped[t.date].transactions.push(t);
+
+        if (t.type === 'income') {
+            grouped[t.date].income += parseFloat(t.amount);
+            monthIncome += parseFloat(t.amount);
+        } else {
+            grouped[t.date].expense += parseFloat(t.amount);
+            monthExpense += parseFloat(t.amount);
         }
     });
 
@@ -176,11 +184,17 @@ export function getAssetsSummary() {
     let totalAssets = 0;
     let totalLiabilities = 0;
 
+    // 使用本地存储的外汇汇率，用于统计总资产时的折算
+    const rates = getExchangeRates();
+
     accounts.forEach(acc => {
-        if (acc.balance >= 0) {
-            totalAssets += acc.balance;
+        const rate = acc.currency ? (rates[acc.currency] || 1) : 1;
+        const convertedBalance = acc.balance * rate;
+
+        if (convertedBalance >= 0) {
+            totalAssets += convertedBalance;
         } else {
-            totalLiabilities += Math.abs(acc.balance);
+            totalLiabilities += Math.abs(convertedBalance);
         }
     });
 
@@ -189,4 +203,109 @@ export function getAssetsSummary() {
         totalLiabilities: totalLiabilities.toFixed(2),
         netAssets: (totalAssets - totalLiabilities).toFixed(2)
     };
+}
+
+/**
+ * 保存（新增/更新）一个账户
+ */
+export function saveAccount(acc) {
+    const existingIndex = accounts.findIndex(a => a.id === acc.id);
+    if (existingIndex !== -1) {
+        accounts[existingIndex] = acc;
+    } else {
+        accounts.push(acc);
+    }
+    localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+}
+
+/**
+ * 删除一个账户
+ */
+export function deleteAccount(id) {
+    accounts = accounts.filter(a => a.id !== id);
+    localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+}
+
+/**
+ * 获取“我的”页面统计信息（使用天数，连续打卡天数）
+ */
+export function getUsageStats() {
+    let installDate = localStorage.getItem('beicai_install_date');
+    if (!installDate) {
+        if (flatTransactions.length > 0) {
+            let earliest = flatTransactions[0].date;
+            for (const t of flatTransactions) {
+                if (new Date(t.date) < new Date(earliest)) {
+                    earliest = t.date;
+                }
+            }
+            installDate = earliest;
+        } else {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            installDate = `${yyyy}-${mm}-${dd}`;
+        }
+        localStorage.setItem('beicai_install_date', installDate);
+    }
+    
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const install = new Date(installDate);
+    install.setHours(0,0,0,0);
+    const diffTime = Math.abs(today - install);
+    const daysUsed = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+    const uniqueDates = [...new Set(flatTransactions.map(t => t.date))].sort().reverse();
+    let consecutiveDays = 0;
+    
+    const yyyyToday = today.getFullYear();
+    const mmToday = String(today.getMonth() + 1).padStart(2, '0');
+    const ddToday = String(today.getDate()).padStart(2, '0');
+    const todayStr = `${yyyyToday}-${mmToday}-${ddToday}`;
+    
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+    
+    let currentDateToCheck = todayStr;
+    if (uniqueDates.includes(todayStr)) {
+        // ok
+    } else if (uniqueDates.includes(yStr)) {
+        currentDateToCheck = yStr;
+    } else {
+        return { daysUsed, consecutiveDays };
+    }
+
+    let d = new Date(currentDateToCheck);
+    while (true) {
+        const checkStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        if (uniqueDates.includes(checkStr)) {
+            consecutiveDays++;
+            d.setDate(d.getDate() - 1);
+        } else {
+            break;
+        }
+    }
+
+    return { daysUsed, consecutiveDays };
+}
+
+/**
+ * 获取外汇参考汇率
+ */
+export function getExchangeRates() {
+    const saved = localStorage.getItem('beicai_exchange_rates');
+    if (saved) {
+        return JSON.parse(saved);
+    }
+    return { 'CNY': 1, 'USD': 7.20, 'HKD': 0.92 };
+}
+
+/**
+ * 保存外汇参考汇率
+ */
+export function saveExchangeRates(rates) {
+    localStorage.setItem('beicai_exchange_rates', JSON.stringify(rates));
 }
