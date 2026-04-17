@@ -227,6 +227,11 @@
                         <span class="menu-val" id="exchangeRateInfo">Loading...</span>
                         <ion-icon name="chevron-forward-outline" class="menu-arrow"></ion-icon>
                     </div>
+                    <div class="menu-item" id="dashangBtn">
+                        <ion-icon name="heart-outline"></ion-icon>
+                        <span class="menu-text">打赏作者</span>
+                        <ion-icon name="chevron-forward-outline" class="menu-arrow"></ion-icon>
+                    </div>
                 </div>
             </div>
         </main>
@@ -411,6 +416,18 @@
                     </div>
                     <button id="saveExchangeRateBtn" style="width: 100%; padding: 16px; background: #000; color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 700;">保存设置</button>
                     <p id="rateUpdateStatus" style="font-size: 12px; color: #666; text-align: center; margin-top: 15px; height: 16px;"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 打赏作者模态框 -->
+        <div id="dashangModal" class="modal-overlay" style="display: flex; align-items: center; justify-content: center;">
+            <div class="modal-content" style="height: auto; max-width: 90vw; padding: 0; background: transparent; box-shadow: none;">
+                <div style="position: relative; display: inline-block;">
+                    <button id="closeDashangModal" class="icon-btn" style="position: absolute; top: -10px; right: -10px; background: rgba(255,255,255,0.9); border-radius: 50%; width: 36px; height: 36px; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+                        <ion-icon name="close-outline" style="color: #333;"></ion-icon>
+                    </button>
+                    <img src="dashang.jpg" alt="打赏作者" style="width: 100%; max-width: 350px; border-radius: 12px; display: block;">
                 </div>
             </div>
         </div>

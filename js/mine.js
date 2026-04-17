@@ -188,4 +188,24 @@ function setupMineEvents() {
             }
         };
     }
+
+    // Dashang (打赏作者) Modal
+    const dashangModal = document.getElementById('dashangModal');
+    const dashangBtn = document.getElementById('dashangBtn');
+
+    if (dashangBtn && dashangModal) {
+        dashangBtn.onclick = () => {
+            dashangModal.classList.add('active');
+        };
+
+        document.getElementById('closeDashangModal').onclick = () => {
+            dashangModal.classList.remove('active');
+        };
+
+        dashangModal.onclick = (e) => {
+            if (e.target === dashangModal) {
+                dashangModal.classList.remove('active');
+            }
+        };
+    }
 }
