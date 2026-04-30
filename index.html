@@ -348,11 +348,10 @@
                         <label style="display: block; font-size: 14px; color: #888; margin-bottom: 8px;">当前余额</label>
                         <div style="display: flex; gap: 10px;">
                             <input type="number" id="assetBalanceInput" step="0.01" style="flex: 1; min-width: 0; padding: 12px; border: 1.5px solid #000; border-radius: 8px; font-size: 16px;" placeholder="0.00">
-                            <select id="assetCurrencyInput" style="display: none; width: 90px; padding: 12px; border: 1.5px solid #000; border-radius: 8px; font-size: 16px; background: #fff;">
-                                <option value="CNY">CNY</option>
-                                <option value="HKD">HKD</option>
-                                <option value="USD">USD</option>
-                            </select>
+                            <div id="assetCurrencySelector" class="custom-select-btn" style="display: none; width: 90px; padding: 12px; border: 1.5px solid #000; border-radius: 8px; font-size: 16px; background: #fff; cursor: pointer; text-align: center;">
+                                <span id="assetCurrencyText">CNY</span>
+                            </div>
+                            <input type="hidden" id="assetCurrencyInput" value="CNY">
                         </div>
                     </div>
                     <button id="saveAssetBtn" style="width: 100%; padding: 16px; background: #000; color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 700;">保存</button>

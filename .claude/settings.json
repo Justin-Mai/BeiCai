@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cp D:/WorkSpace/BeiCai/js/*.js D:/WorkSpace/BeiCai/www/js/)"
+    ]
+  }
+}

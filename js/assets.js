@@ -187,18 +187,71 @@ function setupAssetEventListeners() {
     const typeInput = document.getElementById('assetTypeInput');
     const typeText = document.getElementById('assetTypeText');
     const currencyInput = document.getElementById('assetCurrencyInput');
+    const currencySelector = document.getElementById('assetCurrencySelector');
+    const currencyText = document.getElementById('assetCurrencyText');
+
+    const CURRENCY_OPTIONS = ['CNY', 'HKD', 'USD'];
 
     function updateAssetTypeUI(type) {
         typeInput.value = type;
         typeText.textContent = ASSET_TYPE_LABELS[type] || type;
         renderAssetPresets(type);
         if (type === 'foreign_exchange') {
-            currencyInput.style.display = 'block';
-            if (currencyInput.value === 'CNY') currencyInput.value = 'HKD';
+            currencySelector.style.display = 'block';
+            if (currencyInput.value === 'CNY') {
+                currencyInput.value = 'HKD';
+                currencyText.textContent = 'HKD';
+            }
         } else {
-            currencyInput.style.display = 'none';
+            currencySelector.style.display = 'none';
             currencyInput.value = 'CNY';
+            currencyText.textContent = 'CNY';
         }
+    }
+
+    // 货币自定义选择器
+    if (currencySelector) {
+        currencySelector.addEventListener('click', () => {
+            let container = document.getElementById('customDialogContainer');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'customDialogContainer';
+                document.body.appendChild(container);
+            }
+
+            const optionsHtml = CURRENCY_OPTIONS.map(c => `
+                <div class="picker-month-item ${c === currencyInput.value ? 'active' : ''}" data-currency="${c}" style="grid-column: span 2;">
+                    ${c}
+                </div>
+            `).join('');
+
+            container.innerHTML = `
+                <div class="dialog-overlay active">
+                    <div class="dialog-box" style="max-width: 300px;">
+                        <div class="dialog-title">选择币种</div>
+                        <div class="picker-month-grid" style="gap: 6px;">
+                            ${optionsHtml}
+                        </div>
+                        <div class="dialog-actions" style="margin-top: 16px;">
+                            <button class="dialog-btn dialog-btn-cancel" id="currencyCancelBtn">取消</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            container.querySelectorAll('.picker-month-item').forEach(item => {
+                item.onclick = () => {
+                    const val = item.getAttribute('data-currency');
+                    currencyInput.value = val;
+                    currencyText.textContent = val;
+                    container.innerHTML = '';
+                };
+            });
+
+            document.getElementById('currencyCancelBtn').onclick = () => {
+                container.innerHTML = '';
+            };
+        });
     }
 
     if (typeSelector) {
@@ -297,6 +350,8 @@ function openAssetModal(asset = null) {
     const typeText = document.getElementById('assetTypeText');
     const balanceInput = document.getElementById('assetBalanceInput');
     const currencyInput = document.getElementById('assetCurrencyInput');
+    const currencySelector = document.getElementById('assetCurrencySelector');
+    const currencyText = document.getElementById('assetCurrencyText');
 
     selectedPreset = null;
 
@@ -307,7 +362,9 @@ function openAssetModal(asset = null) {
         typeInput.value = asset.type;
         typeText.textContent = ASSET_TYPE_LABELS[asset.type] || asset.type;
         balanceInput.value = asset.balance;
-        if (currencyInput) currencyInput.value = asset.currency || 'CNY';
+        const cur = asset.currency || 'CNY';
+        currencyInput.value = cur;
+        currencyText.textContent = cur;
     } else {
         editingAssetId = null;
         title.textContent = '添加资产';
@@ -315,16 +372,16 @@ function openAssetModal(asset = null) {
         typeInput.value = 'bank';
         typeText.textContent = ASSET_TYPE_LABELS['bank'];
         balanceInput.value = '';
-        if (currencyInput) currencyInput.value = 'CNY';
+        currencyInput.value = 'CNY';
+        currencyText.textContent = 'CNY';
     }
 
     // 显示预设
     renderAssetPresets(typeInput.value);
     if (typeInput.value === 'foreign_exchange') {
-        currencyInput.style.display = 'block';
+        currencySelector.style.display = 'block';
     } else {
-        currencyInput.style.display = 'none';
-        currencyInput.value = 'CNY';
+        currencySelector.style.display = 'none';
     }
     modal.classList.add('active');
 }

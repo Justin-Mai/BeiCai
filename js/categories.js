@@ -26,6 +26,10 @@ export const DEFAULT_EXPENSE_CATEGORIES = [
     { id: 'child', icon: 'happy-outline', name: '孩子' },
     { id: 'pet', icon: 'paw-outline', name: '宠物' },
     { id: 'digital', icon: 'phone-portrait-outline', name: '数码' },
+    { id: 'daily', icon: 'cube-outline', name: '日用' },
+    { id: 'gift_out', icon: 'gift-outline', name: '礼金' },
+    { id: 'elder', icon: 'people-circle-outline', name: '长辈' },
+    { id: 'invest_loss', icon: 'trending-down-outline', name: '理财亏损' },
     { id: 'other_expense', icon: 'ellipsis-horizontal-outline', name: '其他' },
 ];
 
@@ -36,6 +40,9 @@ export const DEFAULT_INCOME_CATEGORIES = [
     { id: 'gift', icon: 'gift-outline', name: '礼金' },
     { id: 'reimburse', icon: 'receipt-outline', name: '报销' },
     { id: 'refund', icon: 'arrow-undo-outline', name: '退款' },
+    { id: 'medical_ins', icon: 'medkit-outline', name: '医保' },
+    { id: 'housing_fund', icon: 'business-outline', name: '公积金' },
+    { id: 'annuity', icon: 'time-outline', name: '年金' },
     { id: 'other_income', icon: 'ellipsis-horizontal-outline', name: '其他' },
 ];
 

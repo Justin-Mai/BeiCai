@@ -8,6 +8,7 @@ let currentAmount = "0";
 let currentType = "expense";
 let currentCategory = "餐饮";
 let editingId = null;
+let keypadDateValue = ''; // 记账键盘选择的完整日期 YYYY-MM-DD
 
 const keypadController = createKeypadController();
 let saveCallback = null;
@@ -357,19 +358,18 @@ export function setupDateSelector(onMonthChange, initialMonth) {
     // 记账键盘的日期选择
     const keypadDateDisplay = document.getElementById('keypadDateDisplay');
     const keypadDateSelector = document.querySelector('.keypad-date-selector');
-    let currentDateValue = '';
 
     const today = new Date();
     const yyyy = today.getFullYear();
     const mm = String(today.getMonth() + 1).padStart(2, '0');
     const dd = String(today.getDate()).padStart(2, '0');
-    currentDateValue = `${yyyy}-${mm}-${dd}`;
+    keypadDateValue = `${yyyy}-${mm}-${dd}`;
 
     if (keypadDateSelector) {
         keypadDateSelector.addEventListener('click', (e) => {
             e.preventDefault();
-            openDatePicker(currentDateValue, (selected) => {
-                currentDateValue = selected;
+            openDatePicker(keypadDateValue, (selected) => {
+                keypadDateValue = selected;
                 if (selected === `${yyyy}-${mm}-${dd}`) {
                     keypadDateDisplay.textContent = '今天';
                 } else {
@@ -385,19 +385,11 @@ export function setupDateSelector(onMonthChange, initialMonth) {
  * 获取当前键盘选择的日期值
  */
 export function getKeypadDateValue() {
-    const display = document.getElementById('keypadDateDisplay');
-    if (!display) {
+    if (!keypadDateValue) {
         const today = new Date();
         return `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
     }
-    if (display.textContent === '今天') {
-        const today = new Date();
-        return `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-    }
-    // 格式 MM-DD -> 当前年-MM-DD
-    const [m, d] = display.textContent.split('-');
-    const y = new Date().getFullYear();
-    return `${y}-${m}-${d}`;
+    return keypadDateValue;
 }
 
 function updateAmountDisplay() {
@@ -687,6 +679,8 @@ export function openModalForNew() {
     if (typeToggle) typeToggle.style.visibility = 'visible';
 
     // set today
+    const today2 = new Date();
+    keypadDateValue = `${today2.getFullYear()}-${String(today2.getMonth() + 1).padStart(2, '0')}-${String(today2.getDate()).padStart(2, '0')}`;
     if (keypadDateDisplay) {
         keypadDateDisplay.textContent = '今天';
     }
