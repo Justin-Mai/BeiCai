@@ -1,11 +1,11 @@
 import { loadTransactions, saveTransaction, deleteTransaction, findTransaction } from './store.js';
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from './categories.js';
-import { 
-    renderCategoryGrids, 
-    renderTransactions, 
-    updateHeaderSummary, 
-    setupNavigation, 
-    setupDateSelector, 
+import {
+    renderCategoryGrids,
+    renderTransactions,
+    updateHeaderSummary,
+    setupNavigation,
+    setupDateSelector,
+    setupScrollMonthSwitch,
     initModal,
     openModalForEdit
 } from './ui.js';
@@ -19,7 +19,7 @@ let currentTimeframe = "week"; // default
 
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Render dynamic category grids
-    renderCategoryGrids(EXPENSE_CATEGORIES, INCOME_CATEGORIES);
+    renderCategoryGrids();
 
     // 2. Initialize date selector
     const today = new Date();
@@ -77,8 +77,20 @@ document.addEventListener('DOMContentLoaded', () => {
         refreshCharts(false);
     });
 
+    // 监听数据导入完成
+    window.addEventListener('data-imported', () => {
+        refreshDataAndUI();
+        refreshCharts();
+    });
+
     // 6. Initial Load
     refreshDataAndUI();
+
+    // 7. Setup scroll to switch month
+    setupScrollMonthSwitch((newMonth) => {
+        currentSelectedMonth = newMonth;
+        refreshDataAndUI();
+    });
 });
 
 function refreshDataAndUI() {

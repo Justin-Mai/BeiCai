@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(java -version)",
+      "Bash(where gradle:*)",
+      "Bash(mkdir -p www/lib/ionicons www/js)",
+      "Bash(cp index.html www/)",
+      "Bash(cp style.css www/)",
+      "Bash(cp dashang.jpg www/)",
+      "Bash(cp js/*.js www/js/)",
+      "Bash(curl -sL \"https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js\" -o www/lib/ionicons/ionicons.esm.js)",
+      "Bash(curl -sL \"https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js\" -o www/lib/ionicons/ionicons.js)",
+      "Bash(curl -sL \"https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js\" -o www/lib/echarts.min.js)",
+      "Bash(mkdir -p /tmp/ionicons)",
+      "Bash(curl -sL \"https://unpkg.com/ionicons@7.1.0/dist/ionicons/\" -o /tmp/ionicons/index.html)",
+      "Bash(curl -sL \"https://unpkg.com/browse/ionicons@7.1.0/dist/ionicons/\")",
+      "Bash(curl -sI \"https://unpkg.com/ionicons@7.1.0/dist/ionicons/p-d15ec307.js\")",
+      "Bash(curl -sL \"https://unpkg.com/ionicons@7.1.0/dist/ionicons/p-d15ec307.js\" -o www/lib/ionicons/p-d15ec307.js)",
+      "Bash(curl -sL \"https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.entry.js\" -o www/lib/ionicons/ionicons.entry.js)",
+      "Bash(curl -sL \"https://unpkg.com/ionicons@7.1.0/dist/ionicons/p-1c0b2c47.entry.js\" -o www/lib/ionicons/p-1c0b2c47.entry.js)",
+      "Bash(curl -sL \"https://unpkg.com/ionicons@7.1.0/dist/ionicons/p-5f6a0a50.entry.js\" -o www/lib/ionicons/p-5f6a0a50.entry.js)",
+      "Bash(cd /tmp)",
+      "Bash(npm pack:*)",
+      "Bash(tar -xzf ionicons-7.1.0.tgz)",
+      "Bash(rm -rf www/lib/ionicons)",
+      "Bash(cp -r /tmp/package/dist/ionicons www/lib/ionicons)",
+      "Bash(npm init:*)",
+      "Bash(npm install:*)",
+      "Bash(npx cap:*)"
+    ]
+  }
+}

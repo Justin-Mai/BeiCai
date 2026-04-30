@@ -43,32 +43,7 @@ export function loadTransactions(currentSelectedMonth, filterAccountId = null) {
         flatTransactions = JSON.parse(saved);
         sortTransactions();
     } else {
-        // 注入演示数据
         flatTransactions = [];
-        const today = new Date();
-        const icons = ['restaurant-outline', 'bus-outline', 'cart-outline', 'cash-outline'];
-        const titles = ['餐饮', '交通', '购物', '兼职'];
-
-        for (let i = 0; i < 20; i++) {
-            const d = new Date(today);
-            d.setDate(d.getDate() - (i % 5));
-            const yyyy = d.getFullYear();
-            const mm = String(d.getMonth() + 1).padStart(2, '0');
-            const dd = String(d.getDate()).padStart(2, '0');
-            const isIncome = i % 4 === 3;
-
-            flatTransactions.push({
-                id: Date.now() - i * 10000,
-                type: isIncome ? 'income' : 'expense',
-                title: titles[i % 4],
-                icon: icons[i % 4],
-                amount: (Math.random() * 50 + 10).toFixed(2),
-                date: `${yyyy}-${mm}-${dd}`,
-                note: `测试数据 #${i + 1}`
-            });
-        }
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(flatTransactions));
-        sortTransactions();
     }
 
     // 按日期分组，并计算月度汇总
@@ -162,15 +137,7 @@ export function loadAccounts() {
     if (saved) {
         accounts = JSON.parse(saved);
     } else {
-        // 注入演示账户
-        accounts = [
-            { id: 'acc_1', name: '现金', type: 'cash', balance: 500.00, icon: 'wallet-outline', color: '#000000' },
-            { id: 'acc_2', name: '招商银行', type: 'bank', balance: 12500.50, icon: 'card-outline', color: '#333333' },
-            { id: 'acc_3', name: '支付宝', type: 'virtual', balance: 3200.00, icon: 'logo-alipay', color: '#666666' },
-            { id: 'acc_4', name: '微信支付', type: 'virtual', balance: 850.20, icon: 'logo-wechat', color: '#999999' },
-            { id: 'acc_5', name: '蚂蚁花呗', type: 'credit', balance: -1200.00, icon: 'layers-outline', color: '#000000' }
-        ];
-        localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+        accounts = [];
     }
     return accounts;
 }
@@ -227,69 +194,13 @@ export function deleteAccount(id) {
 }
 
 /**
- * 获取“我的”页面统计信息（使用天数，连续打卡天数）
+ * 获取”我的”页面统计信息（记账天数）
  */
 export function getUsageStats() {
-    let installDate = localStorage.getItem('beicai_install_date');
-    if (!installDate) {
-        if (flatTransactions.length > 0) {
-            let earliest = flatTransactions[0].date;
-            for (const t of flatTransactions) {
-                if (new Date(t.date) < new Date(earliest)) {
-                    earliest = t.date;
-                }
-            }
-            installDate = earliest;
-        } else {
-            const today = new Date();
-            const yyyy = today.getFullYear();
-            const mm = String(today.getMonth() + 1).padStart(2, '0');
-            const dd = String(today.getDate()).padStart(2, '0');
-            installDate = `${yyyy}-${mm}-${dd}`;
-        }
-        localStorage.setItem('beicai_install_date', installDate);
-    }
-    
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    const install = new Date(installDate);
-    install.setHours(0,0,0,0);
-    const diffTime = Math.abs(today - install);
-    const daysUsed = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-
-    const uniqueDates = [...new Set(flatTransactions.map(t => t.date))].sort().reverse();
-    let consecutiveDays = 0;
-    
-    const yyyyToday = today.getFullYear();
-    const mmToday = String(today.getMonth() + 1).padStart(2, '0');
-    const ddToday = String(today.getDate()).padStart(2, '0');
-    const todayStr = `${yyyyToday}-${mmToday}-${ddToday}`;
-    
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
-    
-    let currentDateToCheck = todayStr;
-    if (uniqueDates.includes(todayStr)) {
-        // ok
-    } else if (uniqueDates.includes(yStr)) {
-        currentDateToCheck = yStr;
-    } else {
-        return { daysUsed, consecutiveDays };
-    }
-
-    let d = new Date(currentDateToCheck);
-    while (true) {
-        const checkStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        if (uniqueDates.includes(checkStr)) {
-            consecutiveDays++;
-            d.setDate(d.getDate() - 1);
-        } else {
-            break;
-        }
-    }
-
-    return { daysUsed, consecutiveDays };
+    // 记账天数 = 有交易记录的不同日期数量
+    const uniqueDates = new Set(flatTransactions.map(t => t.date));
+    const accountingDays = uniqueDates.size;
+    return { accountingDays };
 }
 
 /**
