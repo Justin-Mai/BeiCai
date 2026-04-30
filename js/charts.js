@@ -1,4 +1,4 @@
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from './categories.js';
+import { DEFAULT_EXPENSE_CATEGORIES as EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES as INCOME_CATEGORIES } from './categories.js';
 
 let expensePieChart = null;
 let trendChart = null;

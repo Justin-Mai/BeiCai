@@ -1,4 +1,73 @@
 import { loadAccounts, getAssetsSummary, loadTransactions, saveAccount, deleteAccount, saveTransaction } from './store.js';
+import { showAlert, showConfirm, showPrompt } from './dialog.js';
+
+/**
+ * 资产类型预设配置（黑白配色，使用品牌图标）
+ */
+const ASSET_PRESETS = {
+    bank: [
+        { name: '招商银行', icon: 'card-outline' },
+        { name: '工商银行', icon: 'business-outline' },
+        { name: '建设银行', icon: 'storefront-outline' },
+        { name: '农业银行', icon: 'leaf-outline' },
+        { name: '中国银行', icon: 'globe-outline' },
+        { name: '交通银行', icon: 'boat-outline' },
+        { name: '浦发银行', icon: 'diamond-outline' },
+        { name: '民生银行', icon: 'people-outline' },
+        { name: '兴业银行', icon: 'flash-outline' },
+        { name: '光大银行', icon: 'sunny-outline' },
+        { name: '平安银行', icon: 'shield-checkmark-outline' },
+        { name: '邮政储蓄', icon: 'mail-outline' },
+    ],
+    virtual: [
+        { name: '支付宝', icon: 'logo-alipay' },
+        { name: '微信支付', icon: 'logo-wechat' },
+        { name: '京东支付', icon: 'bag-outline' },
+        { name: '云闪付', icon: 'thunderstorm-outline' },
+    ],
+    credit: [
+        { name: '花呗', icon: 'flower-outline' },
+        { name: '借呗', icon: 'hand-left-outline' },
+        { name: '信用卡', icon: 'card-outline' },
+        { name: '白条', icon: 'document-text-outline' },
+    ],
+    investment: [
+        { name: '余额宝', icon: 'trending-up-outline' },
+        { name: '基金', icon: 'bar-chart-outline' },
+        { name: '股票', icon: 'pulse-outline' },
+        { name: '定期理财', icon: 'lock-closed-outline' },
+    ],
+    foreign_exchange: [
+        { name: '港美股', icon: 'globe-outline' },
+        { name: '加密货币', icon: 'logo-bitcoin' },
+        { name: '外汇', icon: 'swap-horizontal-outline' },
+    ],
+    cash: [
+        { name: '现金', icon: 'wallet-outline' },
+        { name: '零钱', icon: 'cash-outline' },
+    ],
+};
+
+const ASSET_TYPE_ICONS = {
+    'cash': 'wallet-outline',
+    'bank': 'card-outline',
+    'virtual': 'phone-portrait-outline',
+    'credit': 'layers-outline',
+    'investment': 'trending-up-outline',
+    'foreign_exchange': 'globe-outline'
+};
+
+const ASSET_TYPE_LABELS = {
+    'cash': '资金账户 (现金/零钱)',
+    'bank': '银行卡',
+    'virtual': '虚拟账户 (支付宝/微信)',
+    'credit': '负债 (信用卡/花呗)',
+    'investment': '投资理财',
+    'foreign_exchange': '外汇 (港美股/加密货币)'
+};
+
+let selectedPreset = null;
+let assetEventsBound = false;
 
 /**
  * 渲染资产页面
@@ -6,7 +75,7 @@ import { loadAccounts, getAssetsSummary, loadTransactions, saveAccount, deleteAc
 export function renderAssets() {
     const assetsOverview = document.getElementById('assetsOverview');
     const accountList = document.getElementById('accountList');
-    
+
     if (!assetsOverview || !accountList) return;
 
     const summary = getAssetsSummary();
@@ -52,7 +121,7 @@ export function renderAssets() {
                 const isNegative = acc.balance < 0;
                 html += `
                     <div class="account-card" data-id="${acc.id}">
-                        <div class="acc-icon-wrap" style="background-color: ${acc.color || '#999'};">
+                        <div class="acc-icon-wrap">
                             <ion-icon name="${acc.icon}"></ion-icon>
                         </div>
                         <div class="acc-info">
@@ -67,20 +136,14 @@ export function renderAssets() {
             });
         }
     }
-    
-    accountList.innerHTML = html;
 
-    // 绑定点击事件 (委托处理或直接绑定)
+    accountList.innerHTML = html;
     setupAssetEventListeners();
 }
 
-/**
- * 设置资产页面相关的事件监听器
- */
 function setupAssetEventListeners() {
     const accountList = document.getElementById('accountList');
     if (accountList) {
-        // 使用委托来处理资产行点击
         accountList.onclick = (e) => {
             const card = e.target.closest('.account-card');
             if (card) {
@@ -96,6 +159,10 @@ function setupAssetEventListeners() {
             openAssetModal();
         };
     }
+
+    // 以下事件只需绑定一次
+    if (assetEventsBound) return;
+    assetEventsBound = true;
 
     const closeBtn = document.getElementById('closeAssetDetails');
     if (closeBtn) {
@@ -115,19 +182,109 @@ function setupAssetEventListeners() {
         saveAssetBtn.onclick = handleSaveAsset;
     }
 
+    // 资产类型自定义选择器
+    const typeSelector = document.getElementById('assetTypeSelector');
     const typeInput = document.getElementById('assetTypeInput');
+    const typeText = document.getElementById('assetTypeText');
     const currencyInput = document.getElementById('assetCurrencyInput');
-    if (typeInput && currencyInput) {
-        typeInput.onchange = (e) => {
-            if (e.target.value === 'foreign_exchange') {
-                currencyInput.style.display = 'block';
-                if (currencyInput.value === 'CNY') currencyInput.value = 'HKD';
-            } else {
-                currencyInput.style.display = 'none';
-                currencyInput.value = 'CNY';
-            }
-        };
+
+    function updateAssetTypeUI(type) {
+        typeInput.value = type;
+        typeText.textContent = ASSET_TYPE_LABELS[type] || type;
+        renderAssetPresets(type);
+        if (type === 'foreign_exchange') {
+            currencyInput.style.display = 'block';
+            if (currencyInput.value === 'CNY') currencyInput.value = 'HKD';
+        } else {
+            currencyInput.style.display = 'none';
+            currencyInput.value = 'CNY';
+        }
     }
+
+    if (typeSelector) {
+        typeSelector.addEventListener('click', () => {
+            // 确保容器存在
+            let container = document.getElementById('customDialogContainer');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'customDialogContainer';
+                document.body.appendChild(container);
+            }
+
+            const typesHtml = Object.entries(ASSET_TYPE_LABELS).map(([key, label]) => `
+                <div class="picker-month-item ${key === typeInput.value ? 'active' : ''}" data-type="${key}" style="grid-column: span 2; text-align: left; padding: 12px 16px; font-size: 14px;">
+                    ${label}
+                </div>
+            `).join('');
+
+            container.innerHTML = `
+                <div class="dialog-overlay active">
+                    <div class="dialog-box" style="max-width: 340px;">
+                        <div class="dialog-title">选择资产类型</div>
+                        <div class="picker-month-grid" style="gap: 6px;">
+                            ${typesHtml}
+                        </div>
+                        <div class="dialog-actions" style="margin-top: 16px;">
+                            <button class="dialog-btn dialog-btn-cancel" id="assetTypeCancelBtn">取消</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            container.querySelectorAll('.picker-month-item').forEach(item => {
+                item.onclick = () => {
+                    const selectedType = item.getAttribute('data-type');
+                    updateAssetTypeUI(selectedType);
+                    container.innerHTML = '';
+                };
+            });
+
+            document.getElementById('assetTypeCancelBtn').onclick = () => {
+                container.innerHTML = '';
+            };
+        });
+    }
+}
+
+/**
+ * 渲染资产预设选项
+ */
+function renderAssetPresets(type) {
+    const container = document.getElementById('assetPresetContainer');
+    if (!container) return;
+
+    const presets = ASSET_PRESETS[type] || [];
+    if (presets.length === 0) {
+        container.innerHTML = '';
+        container.style.display = 'none';
+        return;
+    }
+
+    container.style.display = 'block';
+    container.innerHTML = `
+        <label style="display: block; font-size: 14px; color: #888; margin-bottom: 8px;">快速选择</label>
+        <div class="preset-scroll">
+            ${presets.map(p => `
+                <button class="preset-btn" data-name="${p.name}" data-icon="${p.icon}">
+                    <ion-icon name="${p.icon}"></ion-icon>
+                    <span>${p.name}</span>
+                </button>
+            `).join('')}
+        </div>
+    `;
+
+    container.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.onclick = () => {
+            container.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            const name = btn.getAttribute('data-name');
+            const icon = btn.getAttribute('data-icon');
+
+            document.getElementById('assetNameInput').value = name;
+            selectedPreset = { icon, color: '#333' };
+        };
+    });
 }
 
 let editingAssetId = null;
@@ -137,54 +294,77 @@ function openAssetModal(asset = null) {
     const title = document.getElementById('assetModalTitle');
     const nameInput = document.getElementById('assetNameInput');
     const typeInput = document.getElementById('assetTypeInput');
+    const typeText = document.getElementById('assetTypeText');
     const balanceInput = document.getElementById('assetBalanceInput');
     const currencyInput = document.getElementById('assetCurrencyInput');
+
+    selectedPreset = null;
 
     if (asset) {
         editingAssetId = asset.id;
         title.textContent = '编辑资产';
         nameInput.value = asset.name;
         typeInput.value = asset.type;
+        typeText.textContent = ASSET_TYPE_LABELS[asset.type] || asset.type;
         balanceInput.value = asset.balance;
         if (currencyInput) currencyInput.value = asset.currency || 'CNY';
-        if (typeInput) typeInput.dispatchEvent(new Event('change'));
     } else {
         editingAssetId = null;
         title.textContent = '添加资产';
         nameInput.value = '';
         typeInput.value = 'bank';
+        typeText.textContent = ASSET_TYPE_LABELS['bank'];
         balanceInput.value = '';
         if (currencyInput) currencyInput.value = 'CNY';
-        if (typeInput) typeInput.dispatchEvent(new Event('change'));
     }
 
+    // 显示预设
+    renderAssetPresets(typeInput.value);
+    if (typeInput.value === 'foreign_exchange') {
+        currencyInput.style.display = 'block';
+    } else {
+        currencyInput.style.display = 'none';
+        currencyInput.value = 'CNY';
+    }
     modal.classList.add('active');
 }
 
-function handleSaveAsset() {
+async function handleSaveAsset() {
     const name = document.getElementById('assetNameInput').value;
     const type = document.getElementById('assetTypeInput').value;
-    const balance = parseFloat(document.getElementById('assetBalanceInput').value) || 0;
+    let balance = parseFloat(document.getElementById('assetBalanceInput').value) || 0;
     const currencyInput = document.getElementById('assetCurrencyInput');
     const currency = currencyInput ? currencyInput.value : 'CNY';
 
     if (!name) {
-        alert('请输入资产名称');
+        await showAlert('请输入资产名称或选择预设');
         return;
     }
 
-    const icons = {
-        'cash': 'wallet-outline',
-        'bank': 'card-outline',
-        'virtual': 'logo-alipay',
-        'credit': 'layers-outline',
-        'investment': 'trending-up-outline',
-        'foreign_exchange': 'earth-outline'
-    };
+    // 负债类型自动转为负数
+    if (type === 'credit' && balance > 0) {
+        balance = -balance;
+    }
+
+    // 确定图标和颜色
+    let icon = ASSET_TYPE_ICONS[type] || 'help-outline';
+    let color = '#333333';
+
+    if (selectedPreset) {
+        icon = selectedPreset.icon;
+        color = selectedPreset.color;
+    } else {
+        // 尝试匹配已有预设
+        const presets = ASSET_PRESETS[type] || [];
+        const matched = presets.find(p => p.name === name);
+        if (matched) {
+            icon = matched.icon;
+        }
+    }
 
     const assetId = editingAssetId || 'acc_' + Date.now();
-    
-    // 余额调整逻辑：如果正在编辑现有资产，且余额发生了变化
+
+    // 余额调整逻辑
     if (editingAssetId) {
         const accounts = loadAccounts();
         const oldAsset = accounts.find(a => a.id === editingAssetId);
@@ -215,15 +395,14 @@ function handleSaveAsset() {
         type,
         balance,
         currency,
-        icon: icons[type] || 'help-outline',
-        color: '#000000'
+        icon,
+        color
     };
 
     saveAccount(newAcc);
     closeModal('assetModal');
     renderAssets();
-    
-    // 如果详情页打开着，也更新详情页
+
     if (!document.getElementById('assetDetailsPage').classList.contains('hidden')) {
         openAssetDetails(newAcc.id);
     }
@@ -233,10 +412,6 @@ function closeModal(id) {
     document.getElementById(id).classList.remove('active');
 }
 
-/**
- * 打开资产详情页
- * @param {string} assetId 
- */
 function openAssetDetails(assetId) {
     const accounts = loadAccounts();
     const asset = accounts.find(a => a.id === assetId);
@@ -245,10 +420,9 @@ function openAssetDetails(assetId) {
     const overlay = document.getElementById('assetDetailsPage');
     const cardContainer = document.getElementById('assetDetailCardContainer');
     const transactionListContainer = document.getElementById('assetTransactionList');
-    
+
     if (!overlay || !cardContainer) return;
 
-    // 渲染资产卡片 (移除卡片内的调整余额按钮)
     const types = {
         'cash': '现金',
         'bank': '储蓄卡',
@@ -266,13 +440,8 @@ function openAssetDetails(assetId) {
         </div>
     `;
 
-    // 绑定底部操作 (左侧删除，右侧调整余额)
     setupDetailActionListeners(assetId);
-
-    // 渲染收支明细 (加载该账户的真实交易)
     renderAssetTransactions(assetId, transactionListContainer);
-
-    // 显示覆盖层
     overlay.classList.remove('hidden');
 }
 
@@ -280,14 +449,13 @@ function setupDetailActionListeners(assetId) {
     const deleteBtn = document.getElementById('deleteAssetBtn');
     const adjustBtn = document.getElementById('adjustBalanceBtnFooter');
 
-    // 删除资产
     if (deleteBtn) {
-        deleteBtn.onclick = (e) => {
+        deleteBtn.onclick = async (e) => {
             e.preventDefault();
             e.stopPropagation();
-            if (confirm('确定要删除该资产吗？此操作不可撤销。')) {
+            const confirmed = await showConfirm('确定要删除该资产吗？此操作不可撤销。');
+            if (confirmed) {
                 deleteAccount(assetId);
-                // 延迟隐藏覆盖层以防止触发底层界面的“幽灵点击”
                 setTimeout(() => {
                     document.getElementById('assetDetailsPage').classList.add('hidden');
                     renderAssets();
@@ -296,22 +464,21 @@ function setupDetailActionListeners(assetId) {
         };
     }
 
-    // 调整余额
     if (adjustBtn) {
-        adjustBtn.onclick = (e) => {
+        adjustBtn.onclick = async (e) => {
             e.preventDefault();
             e.stopPropagation();
-            
+
             const accounts = loadAccounts();
             const asset = accounts.find(a => a.id === assetId);
             if (!asset) return;
 
-            const input = prompt(`调整【${asset.name}】的余额\n请输入当前的真实金额：`, asset.balance);
+            const input = await showPrompt(`调整【${asset.name}】的余额，请输入当前的真实金额：`, asset.balance.toString(), '调整余额');
             if (input === null || input.trim() === '') return;
 
             const newBalance = parseFloat(input);
             if (isNaN(newBalance)) {
-                alert('请输入有效的数字金额');
+                await showAlert('请输入有效的数字金额');
                 return;
             }
 
@@ -322,7 +489,6 @@ function setupDetailActionListeners(assetId) {
                 const mm = String(today.getMonth() + 1).padStart(2, '0');
                 const dd = String(today.getDate()).padStart(2, '0');
 
-                // 保存交易记录
                 const tx = {
                     id: Date.now(),
                     type: diff > 0 ? 'income' : 'expense',
@@ -336,21 +502,16 @@ function setupDetailActionListeners(assetId) {
                 };
                 saveTransaction(tx);
 
-                // 更新余额
                 asset.balance = newBalance;
                 saveAccount(asset);
 
-                // 刷新页面显示
                 renderAssets();
-                openAssetDetails(assetId); // 自动更新详情页显示
+                openAssetDetails(assetId);
             }
         };
     }
 }
 
-/**
- * 渲染资产收支明细 (真实数据)
- */
 function renderAssetTransactions(assetId, container) {
     const { groupedData } = loadTransactions(null, assetId);
 

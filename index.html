@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>极简记账</title>
+    <title>贝才</title>
     <link rel="stylesheet" href="style.css">
     <!-- Ionicons for beautiful simple icons -->
     <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
@@ -22,10 +22,7 @@
             <div class="header-content">
                 <!-- Left: Calendar info -->
                 <div class="header-left">
-                    <div class="calendar-icon" id="dateSelector">
-                        <!-- Native date input hidden over the icon (selects exact day, but we only use YYYY-MM for header view) -->
-                        <input type="month" id="nativeDateInput" class="hidden-date-input">
-
+                    <div class="calendar-icon" id="dateSelector" style="cursor: pointer;">
                         <ion-icon name="calendar-outline"></ion-icon>
                         <div class="cal-date">
                             <span class="cal-year" id="displayYear">2026</span>
@@ -198,13 +195,9 @@
 
                 <!-- Statistics Cards -->
                 <div class="mine-stats">
-                    <div class="stat-card">
-                        <div class="stat-num" id="daysUsedCount">0</div>
-                        <div class="stat-label">记账天数 (天)</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-num" id="consecutiveDaysCount">0</div>
-                        <div class="stat-label">连续打卡 (天)</div>
+                    <div class="stat-card-single">
+                        <span class="stat-num" id="daysUsedCount">0</span>
+                        <span class="stat-label">记账天数</span>
                     </div>
                 </div>
 
@@ -285,11 +278,10 @@
                             <div class="amount-value" id="amountDisplay">0.00</div>
                         </div>
 
-                        <div class="divider-horizontal" style="margin: 15px 0;"></div>
+                        <div class="divider-horizontal" style="margin: 8px 0;"></div>
 
                         <div class="keypad-toolbar">
-                            <div class="keypad-date-selector">
-                                <input type="date" id="keypadDateInput" class="hidden-date-input">
+                            <div class="keypad-date-selector" style="cursor: pointer;">
                                 <ion-icon name="calendar-outline"></ion-icon>
                                 <span id="keypadDateDisplay">今天</span>
                             </div>
@@ -340,19 +332,17 @@
                 </div>
                 <div class="modal-body">
                     <div class="form-group" style="margin-bottom: 20px;">
-                        <label style="display: block; font-size: 14px; color: #888; margin-bottom: 8px;">资产名称</label>
-                        <input type="text" id="assetNameInput" style="width: 100%; padding: 12px; border: 1.5px solid #000; border-radius: 8px; font-size: 16px;" placeholder="例如：招商银行">
-                    </div>
-                    <div class="form-group" style="margin-bottom: 20px;">
                         <label style="display: block; font-size: 14px; color: #888; margin-bottom: 8px;">资产类型</label>
-                        <select id="assetTypeInput" style="width: 100%; padding: 12px; border: 1.5px solid #000; border-radius: 8px; font-size: 16px; background: #fff;">
-                            <option value="cash">资金账户 (现金/零钱)</option>
-                            <option value="bank" selected>银行卡</option>
-                            <option value="virtual">虚拟账户 (支付宝/微信)</option>
-                            <option value="credit">负债 (信用卡/花呗)</option>
-                            <option value="investment">投资理财</option>
-                            <option value="foreign_exchange">外汇 (港美股/加密货币)</option>
-                        </select>
+                        <div id="assetTypeSelector" class="custom-select-btn" style="width: 100%; padding: 12px; border: 1.5px solid #000; border-radius: 8px; font-size: 16px; background: #fff; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+                            <span id="assetTypeText">银行卡</span>
+                            <ion-icon name="chevron-down-outline" style="font-size: 18px; color: #999;"></ion-icon>
+                        </div>
+                        <input type="hidden" id="assetTypeInput" value="bank">
+                    </div>
+                    <div id="assetPresetContainer" class="form-group" style="margin-bottom: 20px; display: none;"></div>
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label style="display: block; font-size: 14px; color: #888; margin-bottom: 8px;">资产名称</label>
+                        <input type="text" id="assetNameInput" style="width: 100%; padding: 12px; border: 1.5px solid #000; border-radius: 8px; font-size: 16px;" placeholder="输入名称或从上方选择">
                     </div>
                     <div class="form-group" style="margin-bottom: 30px;">
                         <label style="display: block; font-size: 14px; color: #888; margin-bottom: 8px;">当前余额</label>
@@ -379,9 +369,17 @@
                     <div style="width: 32px;"></div>
                 </div>
                 <div class="modal-body">
-                    <div class="form-group" style="margin-bottom: 20px;">
-                        <label style="display: block; font-size: 14px; color: #888; margin-bottom: 8px;">头像 (仅支持输入1个Emoji表情)</label>
-                        <input type="text" id="avatarInput" maxlength="2" style="width: 100%; padding: 12px; border: 1.5px solid #000; border-radius: 8px; font-size: 24px; text-align: center;">
+                    <div class="form-group" style="margin-bottom: 20px; text-align: center;">
+                        <label style="display: block; font-size: 14px; color: #888; margin-bottom: 12px;">头像</label>
+                        <div id="avatarPreviewWrap" style="cursor: pointer; display: inline-block; position: relative;">
+                            <div id="avatarPreview" style="width: 80px; height: 80px; border-radius: 50%; background: #f2f2f7; display: flex; align-items: center; justify-content: center; font-size: 38px; overflow: hidden; border: 2px solid #000;">
+                                😊
+                            </div>
+                            <div style="position: absolute; bottom: 0; right: 0; background: #000; color: #fff; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">
+                                <ion-icon name="camera-outline" style="font-size: 14px;"></ion-icon>
+                            </div>
+                        </div>
+                        <input type="file" id="avatarFileInput" accept="image/*" style="display: none;">
                     </div>
                     <div class="form-group" style="margin-bottom: 20px;">
                         <label style="display: block; font-size: 14px; color: #888; margin-bottom: 8px;">昵称</label>
@@ -392,6 +390,21 @@
                         <input type="text" id="sloganInput" style="width: 100%; padding: 12px; border: 1.5px solid #000; border-radius: 8px; font-size: 16px;">
                     </div>
                     <button id="saveProfileBtn" style="width: 100%; padding: 16px; background: #000; color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 700;">保存资料</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 头像裁剪模态框 -->
+        <div id="avatarCropModal" class="modal-overlay">
+            <div class="modal-content" style="height: 100%; max-height: 100vh; border-radius: 0; display: flex; flex-direction: column;">
+                <div class="modal-header">
+                    <button id="closeCropModal" class="icon-btn"><ion-icon name="close-outline"></ion-icon></button>
+                    <div class="header-title">裁剪头像</div>
+                    <button id="confirmCropBtn" class="text-btn" style="font-size: 14px; font-weight: 600; color: #000;">完成</button>
+                </div>
+                <div class="modal-body" style="flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; background: #000; padding: 0;">
+                    <canvas id="avatarCropCanvas" style="max-width: 100%; max-height: 100%;"></canvas>
+                    <div id="cropCircleOverlay" style="position: absolute; pointer-events: none;"></div>
                 </div>
             </div>
         </div>
