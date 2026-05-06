@@ -3,6 +3,11 @@ import { showAlert, showConfirm, showPrompt } from './dialog.js';
 import { getCategories, addCustomCategory, deleteCustomCategory, CATEGORY_ICONS } from './categories.js';
 import { openMonthPicker, openDatePicker } from './date-picker.js';
 
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 let currentIconName = "restaurant-outline";
 let currentAmount = "0";
 let currentType = "expense";
@@ -128,7 +133,7 @@ export function renderTransactions(groupedData) {
                     <ion-icon name="${t.icon}"></ion-icon>
                 </div>
                 <div class="t-details">
-                    <div class="t-title">${t.title} ${t.note ? `<span style="font-size:12px;color:#999;font-weight:normal;"> - ${t.note}</span>` : ''}</div>
+                    <div class="t-title">${escapeHtml(t.title)} ${t.note ? `<span style="font-size:12px;color:#999;font-weight:normal;"> - ${escapeHtml(t.note)}</span>` : ''}</div>
                 </div>
                 <div class="t-amount ${t.type}">
                     ${t.type === 'expense' ? '-' : '+'}${parseFloat(t.amount || 0).toFixed(2)}

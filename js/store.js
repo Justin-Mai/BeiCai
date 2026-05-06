@@ -5,9 +5,55 @@
 
 const STORAGE_KEY = 'beicai_transactions';
 const ACCOUNTS_KEY = 'beicai_accounts';
+const MAX_STORAGE_BYTES = 4.5 * 1024 * 1024; // 4.5MB 预警阈值（Android WebView 通常 5MB）
 
 let flatTransactions = [];
 let accounts = [];
+
+/**
+ * 安全写入 localStorage，捕获 QuotaExceededError
+ * @returns {boolean} 是否写入成功
+ */
+function safeSetItem(key, value) {
+    try {
+        localStorage.setItem(key, value);
+        return true;
+    } catch (e) {
+        if (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014) {
+            console.error('[store] 存储空间已满，无法保存数据');
+            return false;
+        }
+        throw e;
+    }
+}
+
+/**
+ * 获取当前 localStorage 已用字节数（仅 beicai_ 前缀）
+ */
+export function getStorageUsedBytes() {
+    let total = 0;
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('beicai_')) {
+            total += (key.length + localStorage.getItem(key).length) * 2; // UTF-16
+        }
+    }
+    return total;
+}
+
+/**
+ * 检查存储是否接近上限，返回 { used, limit, percent, warning }
+ */
+export function checkStorageHealth() {
+    const used = getStorageUsedBytes();
+    const percent = Math.round((used / MAX_STORAGE_BYTES) * 100);
+    return {
+        used,
+        limit: MAX_STORAGE_BYTES,
+        percent,
+        warning: percent >= 80 ? `存储空间已使用 ${percent}%，建议导出备份后清理旧数据` : null
+    };
+}
 
 /**
  * 获取星期几
@@ -37,14 +83,20 @@ function sortTransactions() {
  * @param {string} filterAccountId - 可选：按账户 ID 过滤
  * @returns {{ flatTransactions: Array, groupedData: Array, monthIncome: number, monthExpense: number }}
  */
-export function loadTransactions(currentSelectedMonth, filterAccountId = null) {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-        flatTransactions = JSON.parse(saved);
-        sortTransactions();
-    } else {
-        flatTransactions = [];
+function safeParse(key) {
+    try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+        console.error(`[store] 数据解析失败 (${key}):`, e.message);
+        return null;
     }
+}
+
+export function loadTransactions(currentSelectedMonth, filterAccountId = null) {
+    const parsed = safeParse(STORAGE_KEY);
+    flatTransactions = Array.isArray(parsed) ? parsed : [];
+    sortTransactions();
 
     // 按日期分组，并计算月度汇总
     const grouped = {};
@@ -103,6 +155,19 @@ export function loadTransactions(currentSelectedMonth, filterAccountId = null) {
 }
 
 /**
+ * 加载全部交易数据（不分月过滤，供图表使用）
+ */
+export function loadAllTransactions() {
+    const parsed = safeParse(STORAGE_KEY);
+    const all = Array.isArray(parsed) ? parsed : [];
+    all.sort((a, b) => {
+        if (a.date !== b.date) return new Date(b.date) - new Date(a.date);
+        return b.id - a.id;
+    });
+    return all;
+}
+
+/**
  * 保存（新增/更新）一条交易
  */
 export function saveTransaction(tx) {
@@ -112,7 +177,7 @@ export function saveTransaction(tx) {
     } else {
         flatTransactions.push(tx);
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(flatTransactions));
+    safeSetItem(STORAGE_KEY, JSON.stringify(flatTransactions));
 }
 
 /**
@@ -120,7 +185,7 @@ export function saveTransaction(tx) {
  */
 export function deleteTransaction(id) {
     flatTransactions = flatTransactions.filter(t => t.id !== id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(flatTransactions));
+    safeSetItem(STORAGE_KEY, JSON.stringify(flatTransactions));
 }
 
 /**
@@ -134,12 +199,8 @@ export function findTransaction(id) {
  * 加载账户数据
  */
 export function loadAccounts() {
-    const saved = localStorage.getItem(ACCOUNTS_KEY);
-    if (saved) {
-        accounts = JSON.parse(saved);
-    } else {
-        accounts = [];
-    }
+    const parsed = safeParse(ACCOUNTS_KEY);
+    accounts = Array.isArray(parsed) ? parsed : [];
     return accounts;
 }
 
@@ -183,7 +244,7 @@ export function saveAccount(acc) {
     } else {
         accounts.push(acc);
     }
-    localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+    safeSetItem(ACCOUNTS_KEY, JSON.stringify(accounts));
 }
 
 /**
@@ -191,7 +252,7 @@ export function saveAccount(acc) {
  */
 export function deleteAccount(id) {
     accounts = accounts.filter(a => a.id !== id);
-    localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+    safeSetItem(ACCOUNTS_KEY, JSON.stringify(accounts));
 }
 
 /**
@@ -224,5 +285,5 @@ export function getExchangeRates() {
  * 保存外汇参考汇率
  */
 export function saveExchangeRates(rates) {
-    localStorage.setItem('beicai_exchange_rates', JSON.stringify(rates));
+    safeSetItem('beicai_exchange_rates', JSON.stringify(rates));
 }

@@ -17,6 +17,8 @@ import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
+import android.util.Base64;
+
 @CapacitorPlugin(name = "FileExport")
 public class FileExportPlugin extends Plugin {
 
@@ -31,7 +33,7 @@ public class FileExportPlugin extends Plugin {
         }
 
         try {
-            boolean saved = saveToDownloads(fileName, data);
+            boolean saved = saveToDownloads(fileName, data.getBytes(StandardCharsets.UTF_8), "application/json");
             if (saved) {
                 JSObject ret = new JSObject();
                 ret.put("success", true);
@@ -45,15 +47,39 @@ public class FileExportPlugin extends Plugin {
         }
     }
 
-    private boolean saveToDownloads(String fileName, String content) {
-        try {
-            byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
+    @PluginMethod()
+    public void exportBase64(PluginCall call) {
+        String data = call.getString("data");
+        String fileName = call.getString("fileName", "backup.bin");
+        String mimeType = call.getString("mimeType", "application/octet-stream");
 
+        if (data == null || data.isEmpty()) {
+            call.reject("Missing data");
+            return;
+        }
+
+        try {
+            byte[] bytes = Base64.decode(data, Base64.DEFAULT);
+            boolean saved = saveToDownloads(fileName, bytes, mimeType);
+            if (saved) {
+                JSObject ret = new JSObject();
+                ret.put("success", true);
+                ret.put("fileName", fileName);
+                call.resolve(ret);
+            } else {
+                call.reject("Failed to save file");
+            }
+        } catch (Exception e) {
+            call.reject("Export error: " + e.getMessage(), e);
+        }
+    }
+
+    private boolean saveToDownloads(String fileName, byte[] bytes, String mimeType) {
+        try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                // Android 10+ : 使用 MediaStore
                 ContentValues values = new ContentValues();
                 values.put(MediaStore.Downloads.DISPLAY_NAME, fileName);
-                values.put(MediaStore.Downloads.MIME_TYPE, "application/json");
+                values.put(MediaStore.Downloads.MIME_TYPE, mimeType);
                 values.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
 
                 Uri uri = getContext().getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);

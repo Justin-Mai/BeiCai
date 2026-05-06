@@ -5,6 +5,7 @@ let trendChart = null;
 
 let currentPieType = 'expense'; // 'expense' or 'income'
 let currentRankingType = 'expense'; // 'expense' or 'income'
+let chartsEventsBound = false;
 
 export function initCharts() {
     const pieDom = document.getElementById('expensePieChart');
@@ -16,14 +17,15 @@ export function initCharts() {
     if (trendDom && !trendChart) {
         trendChart = echarts.init(trendDom);
     }
-    
-    window.addEventListener('resize', () => {
-        if (expensePieChart) expensePieChart.resize();
-        if (trendChart) trendChart.resize();
-    });
 
-    // 绑定切换事件
-    initToggleEvents();
+    if (!chartsEventsBound) {
+        window.addEventListener('resize', () => {
+            if (expensePieChart) expensePieChart.resize();
+            if (trendChart) trendChart.resize();
+        });
+        initToggleEvents();
+        chartsEventsBound = true;
+    }
 }
 
 function initToggleEvents() {

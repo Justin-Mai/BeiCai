@@ -1736,3 +1736,44 @@ body {
     color: #fff;
     font-weight: 600;
 }
+
+/* 导出格式选择 */
+.export-format-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.export-format-option {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border: 1.5px solid #e5e5e5;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.export-format-option:active {
+    background: #f2f2f7;
+    border-color: #000;
+}
+
+.export-format-info {
+    flex: 1;
+}
+
+.export-format-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #000;
+}
+
+.export-format-desc {
+    font-size: 12px;
+    color: #999;
+    margin-top: 2px;
+}
+}

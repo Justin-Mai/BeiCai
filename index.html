@@ -11,6 +11,8 @@
     <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
     <!-- ECharts -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <!-- SheetJS for Excel/CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
@@ -199,6 +201,7 @@
                         <span class="stat-num" id="daysUsedCount">0</span>
                         <span class="stat-label">记账天数</span>
                     </div>
+                    <span id="storageHealthInfo" style="font-size: 12px; color: #999; align-self: center;"></span>
                 </div>
 
                 <!-- Action Menu -->
@@ -212,7 +215,7 @@
                         <ion-icon name="push-outline"></ion-icon>
                         <span class="menu-text">导入备份账单</span>
                         <ion-icon name="chevron-forward-outline" class="menu-arrow"></ion-icon>
-                        <input type="file" id="importFileInput" style="display: none;" accept=".json">
+                        <input type="file" id="importFileInput" style="display: none;" accept=".json,.xlsx,.csv">
                     </div>
                     <div class="menu-item" id="exchangeRateBtn">
                         <ion-icon name="earth-outline"></ion-icon>
@@ -433,6 +436,63 @@
         </div>
 
         <!-- 打赏作者模态框 -->
+        <div id="exportFormatModal" class="modal-overlay" style="display: flex; align-items: center; justify-content: center;">
+            <div class="dialog-box" style="width: 85%; max-width: 340px; padding: 24px 20px 16px;">
+                <div class="dialog-title">选择导出格式</div>
+                <div class="export-format-list">
+                    <div class="export-format-option" data-format="json">
+                        <ion-icon name="document-text-outline" style="font-size: 28px; color: #000;"></ion-icon>
+                        <div class="export-format-info">
+                            <div class="export-format-name">JSON 备份</div>
+                            <div class="export-format-desc">完整数据，可重新导入</div>
+                        </div>
+                    </div>
+                    <div class="export-format-option" data-format="xlsx">
+                        <ion-icon name="grid-outline" style="font-size: 28px; color: #217346;"></ion-icon>
+                        <div class="export-format-info">
+                            <div class="export-format-name">Excel 表格</div>
+                            <div class="export-format-desc">.xlsx 格式，可用 WPS/Excel 打开</div>
+                        </div>
+                    </div>
+                    <div class="export-format-option" data-format="csv">
+                        <ion-icon name="list-outline" style="font-size: 28px; color: #FF6A00;"></ion-icon>
+                        <div class="export-format-info">
+                            <div class="export-format-name">CSV 表格</div>
+                            <div class="export-format-desc">.csv 格式，通用表格格式</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="dialog-actions" style="margin-top: 16px;">
+                    <button class="dialog-btn dialog-btn-cancel" id="closeExportFormatModal">取消</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="importModeModal" class="modal-overlay" style="display: flex; align-items: center; justify-content: center;">
+            <div class="dialog-box" style="width: 85%; max-width: 340px; padding: 24px 20px 16px;">
+                <div class="dialog-title">选择导入方式</div>
+                <div class="export-format-list">
+                    <div class="export-format-option" data-mode="overwrite">
+                        <ion-icon name="swap-horizontal-outline" style="font-size: 28px; color: #FF3B30;"></ion-icon>
+                        <div class="export-format-info">
+                            <div class="export-format-name">覆盖现有数据</div>
+                            <div class="export-format-desc">清空当前数据，完全替换为导入内容</div>
+                        </div>
+                    </div>
+                    <div class="export-format-option" data-mode="merge">
+                        <ion-icon name="git-merge-outline" style="font-size: 28px; color: #007AFF;"></ion-icon>
+                        <div class="export-format-info">
+                            <div class="export-format-name">合并到现有数据</div>
+                            <div class="export-format-desc">保留现有数据，追加导入的新记录</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="dialog-actions" style="margin-top: 16px;">
+                    <button class="dialog-btn dialog-btn-cancel" id="closeImportModeModal">取消</button>
+                </div>
+            </div>
+        </div>
+
         <div id="dashangModal" class="modal-overlay" style="display: flex; align-items: center; justify-content: center;">
             <div class="modal-content" style="height: auto; max-width: 90vw; padding: 0; background: transparent; box-shadow: none;">
                 <div style="position: relative; display: inline-block;">

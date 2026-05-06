@@ -1,4 +1,4 @@
-import { loadTransactions, saveTransaction, deleteTransaction, findTransaction } from './store.js';
+import { loadTransactions, loadAllTransactions, saveTransaction, deleteTransaction, findTransaction } from './store.js';
 import {
     renderCategoryGrids,
     renderTransactions,
@@ -101,7 +101,7 @@ function refreshDataAndUI() {
 }
 
 function refreshCharts(shouldScroll = true) {
-    const { flatTransactions } = loadTransactions(currentSelectedMonth); 
+    const flatTransactions = loadAllTransactions();
     // 渲染滑动条并拉取激活的具体日期边界
     const activeRangeObj = renderSubTimeframe(currentTimeframe, flatTransactions, (newRangeObj) => {
         // 当滑动条子项被点击时重新绘制

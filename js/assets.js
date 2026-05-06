@@ -1,6 +1,11 @@
 import { loadAccounts, getAssetsSummary, loadTransactions, saveAccount, deleteAccount, saveTransaction } from './store.js';
 import { showAlert, showConfirm, showPrompt } from './dialog.js';
 
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 /**
  * 资产类型预设配置（黑白配色，使用品牌图标）
  */
@@ -440,7 +445,8 @@ async function handleSaveAsset() {
                 amount: Math.abs(diff).toFixed(2),
                 date: `${yyyy}-${mm}-${dd}`,
                 note: `从 ${(oldAsset.balance || 0).toFixed(2)} 调整为 ${(balance || 0).toFixed(2)}`,
-                accountId: assetId
+                accountId: assetId,
+                isAdjustment: true
             };
             saveTransaction(adjustmentTx);
         }
@@ -588,8 +594,8 @@ function renderAssetTransactions(assetId, container) {
                         <ion-icon name="${t.icon || 'receipt-outline'}"></ion-icon>
                     </div>
                     <div class="t-details">
-                        <div class="t-title">${t.title}</div>
-                        <div style="font-size:12px;color:#999;">${t.note || ''}</div>
+                        <div class="t-title">${escapeHtml(t.title)}</div>
+                        <div style="font-size:12px;color:#999;">${escapeHtml(t.note || '')}</div>
                     </div>
                     <div class="t-amount ${t.type}">
                         ${t.type === 'expense' ? '-' : '+'}${parseFloat(t.amount || 0).toFixed(2)}
