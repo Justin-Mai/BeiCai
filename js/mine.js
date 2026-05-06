@@ -46,6 +46,27 @@ function refreshMineData() {
             storageEl.textContent = '';
         }
     }
+
+    // 前台服务开关状态
+    const fgSwitch = document.getElementById('foregroundSwitch');
+    if (fgSwitch) {
+        const fgDisabled = localStorage.getItem('beicai_fg_service_disabled');
+        fgSwitch.checked = fgDisabled !== 'true';
+    }
+
+    // AI 记开关状态
+    const aiSwitch = document.getElementById('aiSwitch');
+    if (aiSwitch) {
+        const aiEnabled = localStorage.getItem('beicai_ai_enabled');
+        aiSwitch.checked = aiEnabled === 'true';
+        // 根据后台常驻状态设置可用性
+        const fgDisabled = localStorage.getItem('beicai_fg_service_disabled');
+        aiSwitch.disabled = fgDisabled === 'true';
+        const aiToggle = document.getElementById('aiToggle');
+        if (aiToggle) {
+            aiToggle.style.opacity = fgDisabled === 'true' ? '0.5' : '1';
+        }
+    }
 }
 
 export function renderMineTab() {
@@ -660,5 +681,86 @@ function setupMineEvents() {
                 dashangModal.classList.remove('active');
             }
         };
+    }
+
+    // 前台服务开关 (仅安卓平台显示)
+    const fgToggle = document.getElementById('foregroundToggle');
+    const fgSwitch = document.getElementById('foregroundSwitch');
+    if (fgToggle && fgSwitch) {
+        // 仅在安卓平台显示
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Foreground) {
+            fgToggle.style.display = 'flex';
+
+            // 读取用户设置
+            const fgDisabled = localStorage.getItem('beicai_fg_service_disabled');
+            fgSwitch.checked = fgDisabled !== 'true';
+
+            // 切换事件
+            fgSwitch.onchange = async () => {
+                const enabled = fgSwitch.checked;
+                if (enabled) {
+                    localStorage.removeItem('beicai_fg_service_disabled');
+                    await window.Capacitor.Plugins.Foreground.start({
+                        title: '贝才',
+                        content: '记账服务运行中'
+                    });
+                } else {
+                    localStorage.setItem('beicai_fg_service_disabled', 'true');
+                    await window.Capacitor.Plugins.Foreground.stop();
+                }
+                // 更新 AI 记开关状态
+                updateAiToggleState();
+            };
+        }
+    }
+
+    // AI 记开关 (仅安卓平台显示，依赖后台常驻)
+    const aiToggle = document.getElementById('aiToggle');
+    const aiSwitch = document.getElementById('aiSwitch');
+    if (aiToggle && aiSwitch) {
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Foreground) {
+            aiToggle.style.display = 'flex';
+
+            // 读取用户设置
+            const aiEnabled = localStorage.getItem('beicai_ai_enabled');
+            aiSwitch.checked = aiEnabled === 'true';
+
+            // 根据后台常驻状态设置可用性
+            updateAiToggleState();
+
+            // 切换事件
+            aiSwitch.onchange = async () => {
+                if (aiSwitch.disabled) return;
+                const enabled = aiSwitch.checked;
+                if (enabled) {
+                    localStorage.setItem('beicai_ai_enabled', 'true');
+                } else {
+                    localStorage.removeItem('beicai_ai_enabled');
+                }
+                // 更新通知内容
+                await window.Capacitor.Plugins.Foreground.updateNotification({
+                    showAi: enabled
+                });
+            };
+        }
+    }
+}
+
+/**
+ * 更新 AI 记开关的可用状态
+ */
+function updateAiToggleState() {
+    const aiSwitch = document.getElementById('aiSwitch');
+    const aiToggle = document.getElementById('aiToggle');
+    if (!aiSwitch || !aiToggle) return;
+
+    const fgDisabled = localStorage.getItem('beicai_fg_service_disabled');
+    const isDisabled = fgDisabled === 'true';
+    aiSwitch.disabled = isDisabled;
+    aiToggle.style.opacity = isDisabled ? '0.5' : '1';
+
+    if (isDisabled && aiSwitch.checked) {
+        aiSwitch.checked = false;
+        localStorage.removeItem('beicai_ai_enabled');
     }
 }

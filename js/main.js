@@ -7,7 +7,8 @@ import {
     setupDateSelector,
     setupScrollMonthSwitch,
     initModal,
-    openModalForEdit
+    openModalForEdit,
+    openModalForNew
 } from './ui.js';
 import { initCharts, triggerChartResize, initTimeframeSelector, renderSubTimeframe, updateChartsDataByRange } from './charts.js';
 import { renderAssets } from './assets.js';
@@ -17,7 +18,7 @@ let currentSelectedMonth = "";
 let currentTimeframe = "week"; // default
 
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // 1. Render dynamic category grids
     renderCategoryGrids();
 
@@ -83,14 +84,31 @@ document.addEventListener('DOMContentLoaded', () => {
         refreshCharts();
     });
 
+    // 监听从通知按钮打开记账弹窗
+    window.addEventListener('open-add-modal', () => {
+        openModalForNew();
+    });
+
     // 6. Initial Load
     refreshDataAndUI();
+
+    // 7. 启动前台服务保活 (仅安卓平台)
+    startForegroundService();
 
     // 7. Setup scroll to switch month
     setupScrollMonthSwitch((newMonth) => {
         currentSelectedMonth = newMonth;
         refreshDataAndUI();
     });
+
+    // 8. 预请求通知权限 (仅安卓平台)
+    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Foreground) {
+        try {
+            await window.Capacitor.Plugins.Foreground.requestPermission();
+        } catch (e) {
+            // 忽略权限请求失败
+        }
+    }
 });
 
 function refreshDataAndUI() {
@@ -110,5 +128,31 @@ function refreshCharts(shouldScroll = true) {
     // 首次绘制
     if (activeRangeObj) {
         updateChartsDataByRange(flatTransactions, activeRangeObj);
+    }
+}
+
+/**
+ * 启动前台服务 (仅安卓平台)
+ * 在状态栏显示常驻通知，保持应用后台存活
+ */
+async function startForegroundService() {
+    try {
+        // 检查是否在安卓平台，且用户未手动关闭
+        const fgDisabled = localStorage.getItem('beicai_fg_service_disabled');
+        if (fgDisabled === 'true') return;
+
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Foreground) {
+            const aiEnabled = localStorage.getItem('beicai_ai_enabled') === 'true';
+            await window.Capacitor.Plugins.Foreground.start({
+                title: '贝才',
+                content: '记账服务运行中'
+            });
+            // 恢复 AI 记状态
+            if (aiEnabled) {
+                await window.Capacitor.Plugins.Foreground.updateNotification({ showAi: true });
+            }
+        }
+    } catch (e) {
+        console.warn('启动前台服务失败:', e);
     }
 }
