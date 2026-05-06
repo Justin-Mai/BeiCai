@@ -129,7 +129,7 @@ export function renderAssets() {
                             <div class="acc-type">${types[type]}</div>
                         </div>
                         <div class="acc-balance ${isNegative ? 'negative' : ''}">
-                            ${acc.balance.toFixed(2)}${acc.currency && acc.currency !== 'CNY' ? ' <span style="font-size: 14px; font-weight: normal; color: #666;">' + acc.currency + '</span>' : ''}
+                            ${(acc.balance || 0).toFixed(2)}${acc.currency && acc.currency !== 'CNY' ? ' <span style="font-size: 14px; font-weight: normal; color: #666;">' + acc.currency + '</span>' : ''}
                         </div>
                     </div>
                 `;
@@ -439,7 +439,7 @@ async function handleSaveAsset() {
                 icon: 'construct-outline',
                 amount: Math.abs(diff).toFixed(2),
                 date: `${yyyy}-${mm}-${dd}`,
-                note: `从 ${oldAsset.balance.toFixed(2)} 调整为 ${balance.toFixed(2)}`,
+                note: `从 ${(oldAsset.balance || 0).toFixed(2)} 调整为 ${(balance || 0).toFixed(2)}`,
                 accountId: assetId
             };
             saveTransaction(adjustmentTx);
@@ -492,7 +492,7 @@ function openAssetDetails(assetId) {
     cardContainer.innerHTML = `
         <div class="asset-card-large">
             <div class="acc-name">${asset.name} <span class="acc-type-tag">${types[asset.type] || '账户'}</span></div>
-            <div class="acc-balance">${asset.balance.toFixed(2)}${asset.currency && asset.currency !== 'CNY' ? ' <span style="font-size: 16px; font-weight: normal; color: #666;">' + asset.currency + '</span>' : ''}</div>
+            <div class="acc-balance">${(asset.balance || 0).toFixed(2)}${asset.currency && asset.currency !== 'CNY' ? ' <span style="font-size: 16px; font-weight: normal; color: #666;">' + asset.currency + '</span>' : ''}</div>
             <div class="acc-label">余额</div>
         </div>
     `;
@@ -553,7 +553,7 @@ function setupDetailActionListeners(assetId) {
                     icon: 'swap-vertical-outline',
                     amount: Math.abs(diff).toFixed(2),
                     date: `${yyyy}-${mm}-${dd}`,
-                    note: `由 ${asset.balance.toFixed(2)} 变更为 ${newBalance.toFixed(2)}`,
+                    note: `由 ${(asset.balance || 0).toFixed(2)} 变更为 ${(newBalance || 0).toFixed(2)}`,
                     accountId: assetId,
                     isAdjustment: true
                 };
@@ -592,7 +592,7 @@ function renderAssetTransactions(assetId, container) {
                         <div style="font-size:12px;color:#999;">${t.note || ''}</div>
                     </div>
                     <div class="t-amount ${t.type}">
-                        ${t.type === 'expense' ? '-' : '+'}${parseFloat(t.amount).toFixed(2)}
+                        ${t.type === 'expense' ? '-' : '+'}${parseFloat(t.amount || 0).toFixed(2)}
                     </div>
                 </div>
             `).join('')}

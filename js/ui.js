@@ -131,7 +131,7 @@ export function renderTransactions(groupedData) {
                     <div class="t-title">${t.title} ${t.note ? `<span style="font-size:12px;color:#999;font-weight:normal;"> - ${t.note}</span>` : ''}</div>
                 </div>
                 <div class="t-amount ${t.type}">
-                    ${t.type === 'expense' ? '-' : '+'}${parseFloat(t.amount).toFixed(2)}
+                    ${t.type === 'expense' ? '-' : '+'}${parseFloat(t.amount || 0).toFixed(2)}
                 </div>
             </div>
         `).join('');
@@ -147,8 +147,8 @@ export function renderTransactions(groupedData) {
 export function updateHeaderSummary(monthIncome, monthExpense) {
     const topInc = document.getElementById('topIncomeValue');
     const topExp = document.getElementById('topExpenseValue');
-    if (topInc) topInc.textContent = monthIncome.toFixed(2);
-    if (topExp) topExp.textContent = monthExpense.toFixed(2);
+    if (topInc) topInc.textContent = (monthIncome || 0).toFixed(2);
+    if (topExp) topExp.textContent = (monthExpense || 0).toFixed(2);
 }
 
 /**

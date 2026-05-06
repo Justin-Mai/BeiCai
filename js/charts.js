@@ -303,7 +303,7 @@ function buildPieData(filteredTx, type = 'expense') {
     const catMap = {};
     filteredTx.forEach(t => {
         if (t.type === type) {
-            catMap[t.title] = (catMap[t.title] || 0) + parseFloat(t.amount);
+            catMap[t.title] = (catMap[t.title] || 0) + (parseFloat(t.amount) || 0);
         }
     });
 
@@ -344,8 +344,8 @@ export function updateChartsDataByRange(allFlatTransactions, rangeObj) {
         allFlatTransactions.forEach(t => {
             if (dataMap[t.date] !== undefined) {
                 filteredTx.push(t);
-                if(t.type === 'income') dataMap[t.date].inc += parseFloat(t.amount);
-                else dataMap[t.date].exp += parseFloat(t.amount);
+                if(t.type === 'income') dataMap[t.date].inc += (parseFloat(t.amount) || 0);
+                else dataMap[t.date].exp += (parseFloat(t.amount) || 0);
             }
         });
         
@@ -364,8 +364,8 @@ export function updateChartsDataByRange(allFlatTransactions, rangeObj) {
             const ym = t.date.substring(0, 7); 
             if (dataMap[ym] !== undefined) {
                 filteredTx.push(t);
-                if(t.type === 'income') dataMap[ym].inc += parseFloat(t.amount);
-                else dataMap[ym].exp += parseFloat(t.amount);
+                if(t.type === 'income') dataMap[ym].inc += (parseFloat(t.amount) || 0);
+                else dataMap[ym].exp += (parseFloat(t.amount) || 0);
             }
         });
         
@@ -377,8 +377,8 @@ export function updateChartsDataByRange(allFlatTransactions, rangeObj) {
 
     // ====== 1.5 计算并更新顶部汇总数据 ======
     filteredTx.forEach(t => {
-        if (t.type === 'income') totalRangeIncome += parseFloat(t.amount);
-        else totalRangeExpense += parseFloat(t.amount);
+        if (t.type === 'income') totalRangeIncome += (parseFloat(t.amount) || 0);
+        else totalRangeExpense += (parseFloat(t.amount) || 0);
     });
 
     const incomeEl = document.getElementById('totalRangeIncome');

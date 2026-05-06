@@ -15,25 +15,27 @@ function renderAvatar(container, avatarValue) {
     }
 }
 
-export function renderMineTab() {
-    // 0. Update Profile
+/** 刷新「我的」页面数据（不重新绑定事件） */
+function refreshMineData() {
     const profile = JSON.parse(localStorage.getItem('beicai_user_profile') || '{"avatar": "😊", "name": "极简达人", "slogan": "简单记账，掌控生活"}');
     document.getElementById('userNameDisplay').textContent = profile.name;
     document.getElementById('userSloganDisplay').textContent = profile.slogan;
     renderAvatar(document.getElementById('userAvatarContainer'), profile.avatar);
 
-    // 1. Update stats
     const stats = getUsageStats();
     document.getElementById('daysUsedCount').textContent = stats.accountingDays;
 
-    // 2. Setup Exchange Rates info
     const rates = getExchangeRates();
     const infoSpan = document.getElementById('exchangeRateInfo');
     if (infoSpan) {
-        infoSpan.innerHTML = `USD: ${rates.USD.toFixed(2)} &nbsp;|&nbsp; HKD: ${rates.HKD.toFixed(2)}`;
+        infoSpan.innerHTML = `USD: ${(rates.USD || 0).toFixed(2)} &nbsp;|&nbsp; HKD: ${(rates.HKD || 0).toFixed(2)}`;
     }
+}
 
-    // 3. Setup event listeners if not already done
+export function renderMineTab() {
+    refreshMineData();
+
+    // 事件只绑定一次
     if (!window.mineEventsBound) {
         setupMineEvents();
         window.mineEventsBound = true;
@@ -43,21 +45,15 @@ export function renderMineTab() {
 // 临时存储裁剪后的头像
 let pendingAvatar = null;
 
-let avatarCropInitialized = false;
-
 function setupMineEvents() {
-    // 初始化头像裁剪（只初始化一次）
-    if (!avatarCropInitialized) {
+    // 初始化头像裁剪
     initAvatarCrop((dataUrl) => {
         pendingAvatar = dataUrl;
-        // 更新预览
         const preview = document.getElementById('avatarPreview');
         if (preview) {
             preview.innerHTML = `<img src="${dataUrl}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
         }
     });
-    avatarCropInitialized = true;
-    } // end avatarCropInitialized check
 
     // Profile Edit
     const profileModal = document.getElementById('profileModal');
@@ -68,7 +64,6 @@ function setupMineEvents() {
             const profile = JSON.parse(localStorage.getItem('beicai_user_profile') || '{"avatar": "😊", "name": "极简达人", "slogan": "简单记账，掌控生活"}');
             pendingAvatar = null;
 
-            // 更新头像预览
             const preview = document.getElementById('avatarPreview');
             if (preview) {
                 if (isImageDataUrl(profile.avatar)) {
@@ -96,7 +91,7 @@ function setupMineEvents() {
             localStorage.setItem('beicai_user_profile', JSON.stringify({ avatar, name, slogan }));
             profileModal.classList.remove('active');
             pendingAvatar = null;
-            renderMineTab();
+            refreshMineData();
         };
     }
 
@@ -121,7 +116,6 @@ function setupMineEvents() {
             const fileName = `beicai_backup_${dateStr}.json`;
 
             try {
-                // 使用自定义原生插件保存到下载目录
                 if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.FileExport) {
                     await window.Capacitor.Plugins.FileExport.exportJson({
                         data: jsonStr,
@@ -131,7 +125,6 @@ function setupMineEvents() {
                     return;
                 }
 
-                // 降级：浏览器下载
                 const blob = new Blob([jsonStr], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -162,11 +155,11 @@ function setupMineEvents() {
         importInput.onchange = async (e) => {
             const file = e.target.files[0];
             if (!file) return;
+            importInput.value = '';
 
             const reader = new FileReader();
             reader.onload = async (event) => {
                 try {
-                    // 清除 BOM 和多余空白
                     let text = event.target.result;
                     if (text.charCodeAt(0) === 0xFEFF) {
                         text = text.slice(1);
@@ -175,7 +168,7 @@ function setupMineEvents() {
 
                     const data = JSON.parse(text);
                     if (data.transactions && data.accounts) {
-                        const confirmed = await showConfirm('即将覆盖当前所有数据。导入后应用将重启，是否继续？');
+                        const confirmed = await showConfirm('即将覆盖当前所有数据，是否继续？');
                         if (confirmed) {
                             localStorage.setItem('beicai_transactions', JSON.stringify(data.transactions));
                             localStorage.setItem('beicai_accounts', JSON.stringify(data.accounts));
@@ -185,14 +178,8 @@ function setupMineEvents() {
                             if (data.installDate) {
                                 localStorage.setItem('beicai_install_date', data.installDate);
                             }
-                            // 重置事件绑定标记，强制重新绑定
-                            window.mineEventsBound = false;
-                            // 清除弹窗容器
-                            const dc = document.getElementById('customDialogContainer');
-                            if (dc) dc.innerHTML = '';
-                            // 重新渲染当前页面
-                            renderMineTab();
-                            // 通知主页面刷新数据
+                            // 刷新所有页面数据
+                            refreshMineData();
                             window.dispatchEvent(new CustomEvent('data-imported'));
                             await showAlert('数据导入成功！');
                         }
@@ -204,7 +191,6 @@ function setupMineEvents() {
                 }
             };
             reader.readAsText(file, 'utf-8');
-            importInput.value = '';
         };
     }
 
@@ -218,8 +204,8 @@ function setupMineEvents() {
     if (exchangeRateBtn && modal) {
         exchangeRateBtn.onclick = () => {
             const rates = getExchangeRates();
-            usdInput.value = rates.USD.toFixed(4);
-            hkdInput.value = rates.HKD.toFixed(4);
+            usdInput.value = (rates.USD || 0).toFixed(4);
+            hkdInput.value = (rates.HKD || 0).toFixed(4);
             statusText.textContent = '';
             modal.classList.add('active');
         };
@@ -228,7 +214,6 @@ function setupMineEvents() {
             modal.classList.remove('active');
         };
 
-        // Auto update
         document.getElementById('autoUpdateRateBtn').onclick = async () => {
             statusText.textContent = '正在获取最新汇率...';
             statusText.style.color = '#666';
@@ -249,7 +234,6 @@ function setupMineEvents() {
             }
         };
 
-        // Save
         document.getElementById('saveExchangeRateBtn').onclick = async () => {
             const u = parseFloat(usdInput.value);
             const h = parseFloat(hkdInput.value);
@@ -264,7 +248,7 @@ function setupMineEvents() {
             saveExchangeRates(currentRates);
 
             modal.classList.remove('active');
-            renderMineTab();
+            refreshMineData();
 
             const confirmed = await showConfirm('汇率已保存。是否立即刷新应用以更新所有资产估算汇总？');
             if (confirmed) {
@@ -273,7 +257,7 @@ function setupMineEvents() {
         };
     }
 
-    // Dashang (打赏作者) Modal
+    // Dashang Modal
     const dashangModal = document.getElementById('dashangModal');
     const dashangBtn = document.getElementById('dashangBtn');
 

@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(cp D:/WorkSpace/BeiCai/js/*.js D:/WorkSpace/BeiCai/www/js/)"
+      "Bash(cp D:/WorkSpace/BeiCai/js/*.js D:/WorkSpace/BeiCai/www/js/)",
+      "Bash(./gradlew assembleDebug)",
+      "Bash(export JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\")"
     ]
   }
 }

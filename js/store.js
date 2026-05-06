@@ -81,12 +81,13 @@ export function loadTransactions(currentSelectedMonth, filterAccountId = null) {
 
         grouped[t.date].transactions.push(t);
 
+        const amt = parseFloat(t.amount) || 0;
         if (t.type === 'income') {
-            grouped[t.date].income += parseFloat(t.amount);
-            monthIncome += parseFloat(t.amount);
+            grouped[t.date].income += amt;
+            monthIncome += amt;
         } else {
-            grouped[t.date].expense += parseFloat(t.amount);
-            monthExpense += parseFloat(t.amount);
+            grouped[t.date].expense += amt;
+            monthExpense += amt;
         }
     });
 
@@ -156,7 +157,7 @@ export function getAssetsSummary() {
 
     accounts.forEach(acc => {
         const rate = acc.currency ? (rates[acc.currency] || 1) : 1;
-        const convertedBalance = acc.balance * rate;
+        const convertedBalance = (acc.balance || 0) * rate;
 
         if (convertedBalance >= 0) {
             totalAssets += convertedBalance;
@@ -207,11 +208,16 @@ export function getUsageStats() {
  * 获取外汇参考汇率
  */
 export function getExchangeRates() {
+    const defaults = { 'CNY': 1, 'USD': 7.20, 'HKD': 0.92 };
     const saved = localStorage.getItem('beicai_exchange_rates');
     if (saved) {
-        return JSON.parse(saved);
+        try {
+            return { ...defaults, ...JSON.parse(saved) };
+        } catch (e) {
+            return defaults;
+        }
     }
-    return { 'CNY': 1, 'USD': 7.20, 'HKD': 0.92 };
+    return defaults;
 }
 
 /**
