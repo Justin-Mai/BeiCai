@@ -1,4 +1,4 @@
-import { loadTransactions, loadAllTransactions, saveTransaction, deleteTransaction, findTransaction } from './store.js';
+import { loadTransactions, loadAllTransactions, saveTransaction, deleteTransaction, findTransaction, migrateLedgerData, getActiveBookId } from './store.js';
 import {
     renderCategoryGrids,
     renderTransactions,
@@ -19,6 +19,9 @@ let currentTimeframe = "week"; // default
 
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // 0. 迁移账本数据（创建默认账本，为现有交易添加 bookId）
+    migrateLedgerData();
+
     // 1. Render dynamic category grids
     renderCategoryGrids();
 
@@ -84,6 +87,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         refreshCharts();
     });
 
+    // 监听账本切换
+    window.addEventListener('book-changed', () => {
+        refreshDataAndUI();
+        refreshCharts();
+    });
+
     // 监听从通知按钮打开记账弹窗
     window.addEventListener('open-add-modal', () => {
         openModalForNew();
@@ -112,14 +121,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function refreshDataAndUI() {
-    const { groupedData, monthIncome, monthExpense } = loadTransactions(currentSelectedMonth);
+    const activeBookId = getActiveBookId();
+    const { groupedData, monthIncome, monthExpense } = loadTransactions(currentSelectedMonth, null, activeBookId);
     renderTransactions(groupedData);
     updateHeaderSummary(monthIncome, monthExpense);
     renderAssets();
 }
 
 function refreshCharts(shouldScroll = true) {
-    const flatTransactions = loadAllTransactions();
+    const activeBookId = getActiveBookId();
+    const flatTransactions = loadAllTransactions(activeBookId);
     // 渲染滑动条并拉取激活的具体日期边界
     const activeRangeObj = renderSubTimeframe(currentTimeframe, flatTransactions, (newRangeObj) => {
         // 当滑动条子项被点击时重新绘制

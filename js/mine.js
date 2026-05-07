@@ -1,4 +1,9 @@
-import { getUsageStats, getExchangeRates, saveExchangeRates, checkStorageHealth } from './store.js';
+import {
+    getUsageStats, getExchangeRates, saveExchangeRates, checkStorageHealth,
+    loadLedgers, saveLedger, deleteLedger, setDefaultBook,
+    getActiveBookId, setActiveBookId, getLedgerById, getLedgerStats,
+    migrateTransactions, getActiveBook, migrateLedgerData
+} from './store.js';
 import { showAlert, showConfirm } from './dialog.js';
 import { initAvatarCrop } from './avatar-crop.js';
 import { getCategories } from './categories.js';
@@ -46,6 +51,9 @@ function refreshMineData() {
             storageEl.textContent = '';
         }
     }
+
+    // 更新当前账本名称
+    updateActiveBookName();
 
     // 前台服务开关状态
     const fgSwitch = document.getElementById('foregroundSwitch');
@@ -111,20 +119,33 @@ function buildAccountIdMap() {
     return map;
 }
 
-/** 构建导出数据行（通用） */
-function buildExportRows() {
+/** 构建导出数据行（通用）
+ * @param {string|null} bookId - 可选：按账本 ID 过滤，null 表示全部
+ * @param {boolean} includeBookColumn - 是否包含账本列
+ */
+function buildExportRows(bookId = null, includeBookColumn = false) {
     const txs = JSON.parse(localStorage.getItem('beicai_transactions') || '[]');
     const accNameMap = buildAccountNameMap();
+    const ledgerMap = {};
+    loadLedgers().forEach(l => { ledgerMap[l.id] = l.name; });
+
     return txs
         .filter(t => !t.isAdjustment)
-        .map(t => ({
-            '日期': t.date,
-            '类型': t.type === 'income' ? '收入' : '支出',
-            '分类': t.title,
-            '金额': parseFloat(t.amount) || 0,
-            '账户': t.accountId ? (accNameMap[t.accountId] || '') : '',
-            '备注': t.note || ''
-        }));
+        .filter(t => !bookId || t.bookId === bookId)
+        .map(t => {
+            const row = {
+                '日期': t.date,
+                '类型': t.type === 'income' ? '收入' : '支出',
+                '分类': t.title,
+                '金额': parseFloat(t.amount) || 0,
+                '账户': t.accountId ? (accNameMap[t.accountId] || '') : '',
+                '备注': t.note || ''
+            };
+            if (includeBookColumn) {
+                row['账本'] = t.bookId ? (ledgerMap[t.bookId] || '默认账本') : '默认账本';
+            }
+            return row;
+        });
 }
 
 /** 生成文件名日期后缀 */
@@ -158,16 +179,27 @@ function arrayBufferToBase64(buffer) {
 }
 
 // ============ 导出 JSON ============
-async function exportAsJson() {
-    const txs = localStorage.getItem('beicai_transactions') || '[]';
+async function exportAsJson(scope = 'current') {
+    const activeBookId = getActiveBookId();
+    let txs = JSON.parse(localStorage.getItem('beicai_transactions') || '[]');
+    let ledgersData = JSON.parse(localStorage.getItem('beicai_ledgers') || '[]');
+
+    // 按范围过滤交易和账本
+    if (scope === 'current') {
+        txs = txs.filter(t => t.bookId === activeBookId);
+        // 只导出当前账本信息
+        ledgersData = ledgersData.filter(l => l.id === activeBookId);
+    }
+
     const accs = localStorage.getItem('beicai_accounts') || '[]';
     const rates = localStorage.getItem('beicai_exchange_rates') || '{}';
     const installDate = localStorage.getItem('beicai_install_date') || '';
 
     const backupObj = {
-        transactions: JSON.parse(txs),
+        transactions: txs,
         accounts: JSON.parse(accs),
         exchangeRates: JSON.parse(rates),
+        ledgers: ledgersData,
         installDate
     };
     const jsonStr = JSON.stringify(backupObj, null, 2);
@@ -188,16 +220,21 @@ async function exportAsJson() {
 }
 
 // ============ 导出 Excel ============
-async function exportAsExcel() {
-    const rows = buildExportRows();
-    const headers = ['日期', '类型', '分类', '金额', '账户', '备注'];
+async function exportAsExcel(scope = 'current') {
+    const activeBookId = getActiveBookId();
+    const bookId = scope === 'current' ? activeBookId : null;
+    const includeBookColumn = scope === 'all';
+    const rows = buildExportRows(bookId, includeBookColumn);
+
+    const headers = includeBookColumn
+        ? ['日期', '类型', '分类', '金额', '账户', '账本', '备注']
+        : ['日期', '类型', '分类', '金额', '账户', '备注'];
     const aoa = [headers, ...rows.map(r => headers.map(h => r[h]))];
 
     const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws['!cols'] = [
-        { wch: 12 }, { wch: 6 }, { wch: 10 },
-        { wch: 12 }, { wch: 12 }, { wch: 20 }
-    ];
+    ws['!cols'] = includeBookColumn
+        ? [{ wch: 12 }, { wch: 6 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 20 }]
+        : [{ wch: 12 }, { wch: 6 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 20 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, '记账明细');
     const fileName = `beicai_backup_${getDateStr()}.xlsx`;
@@ -221,9 +258,15 @@ async function exportAsExcel() {
 }
 
 // ============ 导出 CSV ============
-async function exportAsCsv() {
-    const rows = buildExportRows();
-    const headers = ['日期', '类型', '分类', '金额', '账户', '备注'];
+async function exportAsCsv(scope = 'current') {
+    const activeBookId = getActiveBookId();
+    const bookId = scope === 'current' ? activeBookId : null;
+    const includeBookColumn = scope === 'all';
+    const rows = buildExportRows(bookId, includeBookColumn);
+
+    const headers = includeBookColumn
+        ? ['日期', '类型', '分类', '金额', '账户', '账本', '备注']
+        : ['日期', '类型', '分类', '金额', '账户', '备注'];
     const csvLines = [headers.join(',')];
     rows.forEach(r => {
         const line = headers.map(h => {
@@ -278,7 +321,51 @@ async function applyImportData(mode) {
     pendingImportData = null;
 
     try {
+        // 覆盖模式：先导入账本数据，确保交易的bookId有对应的账本
         if (mode === 'overwrite') {
+            // 1. 先导入账本（如果有）
+            if (data.ledgers && data.ledgers.length > 0) {
+                // 确保导入的账本列表中包含默认账本
+                const hasDefault = data.ledgers.some(l => l.id === 'book_default');
+                if (!hasDefault) {
+                    data.ledgers.push({
+                        id: 'book_default',
+                        name: '默认账本',
+                        icon: 'book-outline',
+                        isDefault: true,
+                        createdAt: new Date().toISOString()
+                    });
+                }
+                safeSetItem('beicai_ledgers', JSON.stringify(data.ledgers));
+            } else {
+                // 如果没有账本数据，确保有默认账本
+                const existingLedgers = loadLedgers();
+                if (existingLedgers.length === 0) {
+                    safeSetItem('beicai_ledgers', JSON.stringify([{
+                        id: 'book_default',
+                        name: '默认账本',
+                        icon: 'book-outline',
+                        isDefault: true,
+                        createdAt: new Date().toISOString()
+                    }]));
+                }
+            }
+            // 重新加载账本列表
+            loadLedgers();
+
+            // 2. 验证并修复交易的bookId
+            if (data.transactions) {
+                const validBookIds = new Set(loadLedgers().map(l => l.id));
+                const defaultBookId = 'book_default';
+                data.transactions.forEach(tx => {
+                    // 如果交易没有bookId，或者bookId不存在于账本列表中，则设为默认账本
+                    if (!tx.bookId || !validBookIds.has(tx.bookId)) {
+                        tx.bookId = defaultBookId;
+                    }
+                });
+            }
+
+            // 3. 导入交易数据
             if (data.transactions && !safeSetItem('beicai_transactions', JSON.stringify(data.transactions))) {
                 await showAlert('导入失败：存储空间不足，请先清理旧数据。', '存储已满');
                 return;
@@ -287,7 +374,52 @@ async function applyImportData(mode) {
             if (data.exchangeRates) safeSetItem('beicai_exchange_rates', JSON.stringify(data.exchangeRates));
             if (data.installDate) safeSetItem('beicai_install_date', data.installDate);
         } else {
-            // 合并模式：去重后追加
+            // 合并模式：先合并账本，再合并交易
+            // 1. 合并账本数据
+            const existingLedgers = loadLedgers();
+            if (data.ledgers && data.ledgers.length > 0) {
+                const existingLedgerIds = new Set(existingLedgers.map(l => l.id));
+                const newLedgers = data.ledgers.filter(l => !existingLedgerIds.has(l.id));
+                // 确保有默认账本
+                const hasDefault = existingLedgers.some(l => l.id === 'book_default') ||
+                                   newLedgers.some(l => l.id === 'book_default');
+                if (!hasDefault) {
+                    newLedgers.push({
+                        id: 'book_default',
+                        name: '默认账本',
+                        icon: 'book-outline',
+                        isDefault: true,
+                        createdAt: new Date().toISOString()
+                    });
+                }
+                if (newLedgers.length > 0) {
+                    safeSetItem('beicai_ledgers', JSON.stringify([...existingLedgers, ...newLedgers]));
+                }
+            } else if (existingLedgers.length === 0) {
+                // 如果没有账本数据且当前也没有账本，创建默认账本
+                safeSetItem('beicai_ledgers', JSON.stringify([{
+                    id: 'book_default',
+                    name: '默认账本',
+                    icon: 'book-outline',
+                    isDefault: true,
+                    createdAt: new Date().toISOString()
+                }]));
+            }
+            // 重新加载账本列表
+            loadLedgers();
+
+            // 2. 验证并修复交易的bookId
+            const validBookIds = new Set(loadLedgers().map(l => l.id));
+            const defaultBookId = 'book_default';
+            if (data.transactions) {
+                data.transactions.forEach(tx => {
+                    if (!tx.bookId || !validBookIds.has(tx.bookId)) {
+                        tx.bookId = defaultBookId;
+                    }
+                });
+            }
+
+            // 3. 合并交易数据（去重后追加）
             const existingTxs = JSON.parse(localStorage.getItem('beicai_transactions') || '[]');
             const existingIds = new Set(existingTxs.map(t => t.id));
             const newTxs = (data.transactions || []).filter(t => !existingIds.has(t.id));
@@ -367,6 +499,11 @@ function parseTabularRows(rows) {
 
     const catMap = buildCategoryMap();
     const accIdMap = buildAccountIdMap();
+
+    // 构建账本名称到ID的映射
+    const ledgerNameMap = {};
+    loadLedgers().forEach(l => { ledgerNameMap[l.name] = l.id; });
+
     const txs = [];
     let skipped = 0;
 
@@ -377,6 +514,7 @@ function parseTabularRows(rows) {
         let amount = row['金额'] || row['amount'] || '0';
         const accountName = row['账户'] || row['account'] || '';
         const note = row['备注'] || row['描述'] || row['note'] || '';
+        const bookName = row['账本'] || row['book'] || '';
 
         let parsedDate = String(date).trim().replace(/\//g, '-');
         if (/^\d{8}$/.test(parsedDate)) {
@@ -397,12 +535,41 @@ function parseTabularRows(rows) {
         let accountId = null;
         if (accountName && accIdMap[accountName]) accountId = accIdMap[accountName];
 
-        txs.push({
+        // 根据账本名称查找账本ID，如果不存在则创建新账本
+        let bookId = null;
+        if (bookName) {
+            if (ledgerNameMap[bookName]) {
+                bookId = ledgerNameMap[bookName];
+            } else {
+                // 账本名称不存在，创建新账本
+                const newBookId = `book_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                const newLedger = {
+                    id: newBookId,
+                    name: bookName,
+                    icon: 'book-outline',
+                    isDefault: false,
+                    createdAt: new Date().toISOString()
+                };
+                // 保存新账本
+                const currentLedgers = JSON.parse(localStorage.getItem('beicai_ledgers') || '[]');
+                currentLedgers.push(newLedger);
+                localStorage.setItem('beicai_ledgers', JSON.stringify(currentLedgers));
+                // 更新映射
+                ledgerNameMap[bookName] = newBookId;
+                bookId = newBookId;
+            }
+        }
+
+        const tx = {
             id: Date.now() + idx,
             type, title: category || '其他', icon,
             amount: numAmount.toFixed(2),
             date: parsedDate, note: note || '', accountId
-        });
+        };
+        if (bookId) {
+            tx.bookId = bookId;
+        }
+        txs.push(tx);
     });
 
     if (txs.length === 0) return null;
@@ -412,6 +579,9 @@ function parseTabularRows(rows) {
 // ============ 事件绑定 ============
 
 function setupMineEvents() {
+    // 初始化账本管理弹窗
+    setupLedgerModal();
+
     // 初始化头像裁剪
     initAvatarCrop((dataUrl) => {
         pendingAvatar = dataUrl;
@@ -468,7 +638,14 @@ function setupMineEvents() {
     const exportBtn = document.getElementById('exportDataBtn');
     const exportFormatModal = document.getElementById('exportFormatModal');
     if (exportBtn && exportFormatModal) {
+        let exportScope = 'current'; // 默认导出当前账本
+
         exportBtn.onclick = () => {
+            // 重置范围选择器
+            exportScope = 'current';
+            exportFormatModal.querySelectorAll('.scope-option').forEach(opt => {
+                opt.classList.toggle('active', opt.dataset.scope === 'current');
+            });
             exportFormatModal.classList.add('active');
         };
 
@@ -482,13 +659,24 @@ function setupMineEvents() {
             }
         };
 
+        // 范围选择器事件
+        exportFormatModal.querySelectorAll('.scope-option').forEach(opt => {
+            opt.onclick = () => {
+                exportScope = opt.dataset.scope;
+                exportFormatModal.querySelectorAll('.scope-option').forEach(o => {
+                    o.classList.toggle('active', o.dataset.scope === exportScope);
+                });
+            };
+        });
+
+        // 格式选择事件
         exportFormatModal.querySelectorAll('.export-format-option').forEach(opt => {
             opt.onclick = async () => {
                 const format = opt.dataset.format;
                 exportFormatModal.classList.remove('active');
-                if (format === 'json') await exportAsJson();
-                else if (format === 'xlsx') await exportAsExcel();
-                else if (format === 'csv') await exportAsCsv();
+                if (format === 'json') await exportAsJson(exportScope);
+                else if (format === 'xlsx') await exportAsExcel(exportScope);
+                else if (format === 'csv') await exportAsCsv(exportScope);
             };
         });
     }
@@ -762,5 +950,375 @@ function updateAiToggleState() {
     if (isDisabled && aiSwitch.checked) {
         aiSwitch.checked = false;
         localStorage.removeItem('beicai_ai_enabled');
+    }
+}
+
+// ==================== 账本管理 ====================
+
+let editingLedgerId = null; // 当前正在编辑的账本 ID
+let migrateSourceId = null; // 待迁移的源账本 ID
+let migrateTargetId = null; // 迁移目标账本 ID
+
+/** 更新当前账本名称显示 */
+function updateActiveBookName() {
+    const activeBook = getActiveBook();
+    const nameEl = document.getElementById('activeBookName');
+    if (nameEl && activeBook) {
+        nameEl.textContent = activeBook.name;
+    }
+}
+
+/** 渲染账本列表 */
+function renderLedgerList() {
+    const ledgers = loadLedgers();
+    const activeBookId = getActiveBookId();
+    const listEl = document.getElementById('ledgerList');
+    if (!listEl) return;
+
+    listEl.innerHTML = ledgers.map(ledger => {
+        const stats = getLedgerStats(ledger.id);
+        const isActive = ledger.id === activeBookId;
+        const isDefault = ledger.isDefault;
+        const canDelete = ledgers.length > 1;
+
+        return `
+            <div class="ledger-list-item ${isActive ? 'active' : ''}" data-book-id="${ledger.id}">
+                <div class="ledger-icon">
+                    <ion-icon name="${ledger.icon || 'book-outline'}"></ion-icon>
+                </div>
+                <div class="ledger-info">
+                    <div class="ledger-name">${ledger.name}</div>
+                    <div class="ledger-stats">${stats.txCount} 条记录</div>
+                </div>
+                ${isActive ? '<div class="ledger-badge">当前</div>' : ''}
+                ${isDefault ? '<div class="ledger-badge" style="background:#666;">默认</div>' : ''}
+                <div class="ledger-actions">
+                    <button class="ledger-action-btn" data-action="edit" data-book-id="${ledger.id}" title="编辑">
+                        <ion-icon name="create-outline"></ion-icon>
+                    </button>
+                    ${canDelete ? `
+                        <button class="ledger-action-btn" data-action="delete" data-book-id="${ledger.id}" title="删除">
+                            <ion-icon name="trash-outline"></ion-icon>
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // 绑定列表项点击事件（切换账本）
+    listEl.querySelectorAll('.ledger-list-item').forEach(item => {
+        item.onclick = (e) => {
+            // 忽略按钮点击
+            if (e.target.closest('.ledger-action-btn')) return;
+
+            const bookId = item.dataset.bookId;
+            if (bookId === activeBookId) return;
+
+            setActiveBookId(bookId);
+            updateActiveBookName();
+
+            // 关闭弹窗
+            document.getElementById('ledgerModal').classList.remove('active');
+
+            // 触发账本切换事件
+            window.dispatchEvent(new CustomEvent('book-changed'));
+        };
+    });
+
+    // 绑定编辑按钮事件
+    listEl.querySelectorAll('[data-action="edit"]').forEach(btn => {
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            const bookId = btn.dataset.bookId;
+            const ledger = getLedgerById(bookId);
+            if (ledger) {
+                openLedgerForm(ledger);
+            }
+        };
+    });
+
+    // 绑定删除按钮事件
+    listEl.querySelectorAll('[data-action="delete"]').forEach(btn => {
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            const bookId = btn.dataset.bookId;
+            handleDeleteLedger(bookId);
+        };
+    });
+}
+
+/** 打开账本编辑表单（新建/编辑） */
+function openLedgerForm(ledger = null) {
+    const modal = document.getElementById('ledgerEditModal');
+    const titleEl = document.getElementById('ledgerEditTitle');
+    const nameInput = document.getElementById('ledgerNameInput');
+    const iconGrid = document.getElementById('ledgerIconGrid');
+
+    if (!modal || !titleEl || !nameInput || !iconGrid) return;
+
+    editingLedgerId = ledger ? ledger.id : null;
+    titleEl.textContent = ledger ? '编辑账本' : '新建账本';
+    nameInput.value = ledger ? ledger.name : '';
+
+    // 可选图标列表
+    const icons = [
+        'book-outline', 'wallet-outline', 'home-outline', 'car-outline',
+        'airplane-outline', 'gift-outline', 'heart-outline', 'star-outline',
+        'briefcase-outline', 'school-outline', 'fitness-outline', 'restaurant-outline',
+        'cart-outline', 'bag-outline', 'bed-outline', 'cafe-outline',
+        'game-controller-outline', 'musical-notes-outline', 'paw-outline', 'phone-portrait-outline'
+    ];
+
+    const currentIcon = ledger ? (ledger.icon || 'book-outline') : 'book-outline';
+
+    // 渲染图标网格
+    iconGrid.innerHTML = icons.map(icon => `
+        <div class="icon-grid-item ${icon === currentIcon ? 'selected' : ''}" data-icon="${icon}">
+            <ion-icon name="${icon}"></ion-icon>
+        </div>
+    `).join('');
+
+    // 绑定图标选择事件
+    iconGrid.querySelectorAll('.icon-grid-item').forEach(item => {
+        item.onclick = () => {
+            iconGrid.querySelectorAll('.icon-grid-item').forEach(i => i.classList.remove('selected'));
+            item.classList.add('selected');
+        };
+    });
+
+    modal.classList.add('active');
+    nameInput.focus();
+}
+
+/** 初始化账本管理弹窗 */
+function setupLedgerModal() {
+    const ledgerModal = document.getElementById('ledgerModal');
+    const ledgerEditModal = document.getElementById('ledgerEditModal');
+    const migrateModal = document.getElementById('migrateModal');
+
+    if (!ledgerModal || !ledgerEditModal || !migrateModal) return;
+
+    // 打开账本管理弹窗
+    const ledgerManageBtn = document.getElementById('ledgerManageBtn');
+    if (ledgerManageBtn) {
+        ledgerManageBtn.onclick = () => {
+            renderLedgerList();
+            ledgerModal.classList.add('active');
+        };
+    }
+
+    // 关闭账本管理弹窗
+    document.getElementById('closeLedgerModal').onclick = () => {
+        ledgerModal.classList.remove('active');
+    };
+
+    ledgerModal.onclick = (e) => {
+        if (e.target === ledgerModal) {
+            ledgerModal.classList.remove('active');
+        }
+    };
+
+    // 新建账本按钮
+    document.getElementById('addLedgerBtn').onclick = () => {
+        openLedgerForm();
+    };
+
+    // 关闭账本编辑弹窗
+    document.getElementById('cancelLedgerEdit').onclick = () => {
+        ledgerEditModal.classList.remove('active');
+        editingLedgerId = null;
+    };
+
+    ledgerEditModal.onclick = (e) => {
+        if (e.target === ledgerEditModal) {
+            ledgerEditModal.classList.remove('active');
+            editingLedgerId = null;
+        }
+    };
+
+    // 确认保存账本
+    document.getElementById('confirmLedgerEdit').onclick = async () => {
+        const name = document.getElementById('ledgerNameInput').value.trim();
+        const selectedIconItem = document.querySelector('#ledgerIconGrid .icon-grid-item.selected');
+        const icon = selectedIconItem ? selectedIconItem.dataset.icon : 'book-outline';
+
+        if (!name) {
+            await showAlert('请输入账本名称', '提示');
+            return;
+        }
+
+        const ledger = {
+            id: editingLedgerId || `book_${Date.now()}`,
+            name,
+            icon,
+            isDefault: false,
+            createdAt: new Date().toISOString()
+        };
+
+        // 如果是编辑，保留原有的 isDefault 和 createdAt
+        if (editingLedgerId) {
+            const existing = getLedgerById(editingLedgerId);
+            if (existing) {
+                ledger.isDefault = existing.isDefault;
+                ledger.createdAt = existing.createdAt;
+            }
+        }
+
+        const success = saveLedger(ledger);
+        if (!success) {
+            await showAlert('账本名称重复，请使用其他名称', '保存失败');
+            return;
+        }
+
+        ledgerEditModal.classList.remove('active');
+        editingLedgerId = null;
+
+        // 刷新账本列表
+        renderLedgerList();
+
+        // 如果是新建账本，自动切换到新账本
+        if (!editingLedgerId) {
+            setActiveBookId(ledger.id);
+            updateActiveBookName();
+            window.dispatchEvent(new CustomEvent('book-changed'));
+        }
+    };
+
+    // 取消迁移
+    document.getElementById('cancelMigrate').onclick = () => {
+        migrateModal.classList.remove('active');
+        migrateSourceId = null;
+        migrateTargetId = null;
+    };
+
+    migrateModal.onclick = (e) => {
+        if (e.target === migrateModal) {
+            migrateModal.classList.remove('active');
+            migrateSourceId = null;
+            migrateTargetId = null;
+        }
+    };
+
+    // 确认迁移
+    document.getElementById('confirmMigrate').onclick = async () => {
+        if (!migrateSourceId || !migrateTargetId) {
+            await showAlert('请选择目标账本', '提示');
+            return;
+        }
+
+        // 执行迁移
+        const count = migrateTransactions(migrateSourceId, migrateTargetId);
+
+        // 删除源账本
+        deleteLedger(migrateSourceId);
+
+        // 如果删除的是当前活跃账本，切换到目标账本
+        if (getActiveBookId() === migrateSourceId) {
+            setActiveBookId(migrateTargetId);
+            updateActiveBookName();
+        }
+
+        migrateModal.classList.remove('active');
+        migrateSourceId = null;
+        migrateTargetId = null;
+
+        // 关闭账本管理弹窗并刷新
+        document.getElementById('ledgerModal').classList.remove('active');
+        window.dispatchEvent(new CustomEvent('book-changed'));
+
+        await showAlert(`已迁移 ${count} 条记录`, '迁移成功');
+    };
+
+    // 直接删除（含记录）
+    document.getElementById('forceDeleteMigrate').onclick = async () => {
+        if (!migrateSourceId) return;
+
+        const ledger = getLedgerById(migrateSourceId);
+        const stats = getLedgerStats(migrateSourceId);
+
+        const confirmed = await showConfirm(`确定删除账本「${ledger ? ledger.name : ''}」及其 ${stats.txCount} 条记录？此操作不可恢复！`);
+        if (!confirmed) return;
+
+        // 删除账本下的所有交易
+        const transactions = JSON.parse(localStorage.getItem('beicai_transactions') || '[]');
+        const filteredTxs = transactions.filter(t => t.bookId !== migrateSourceId);
+        localStorage.setItem('beicai_transactions', JSON.stringify(filteredTxs));
+
+        // 删除账本
+        deleteLedger(migrateSourceId);
+
+        // 如果删除的是当前活跃账本，切换到默认账本
+        if (getActiveBookId() === migrateSourceId) {
+            const defaultLedger = loadLedgers().find(l => l.isDefault);
+            if (defaultLedger) {
+                setActiveBookId(defaultLedger.id);
+            } else if (loadLedgers().length > 0) {
+                setActiveBookId(loadLedgers()[0].id);
+            }
+            updateActiveBookName();
+        }
+
+        migrateModal.classList.remove('active');
+        migrateSourceId = null;
+        migrateTargetId = null;
+
+        // 关闭账本管理弹窗并刷新
+        document.getElementById('ledgerModal').classList.remove('active');
+        window.dispatchEvent(new CustomEvent('book-changed'));
+
+        await showAlert(`已删除账本及 ${stats.txCount} 条记录`, '删除成功');
+    };
+}
+
+/** 处理删除账本 */
+async function handleDeleteLedger(bookId) {
+    const ledger = getLedgerById(bookId);
+    if (!ledger) return;
+
+    const stats = getLedgerStats(bookId);
+
+    if (stats.txCount === 0) {
+        // 无记录，直接删除
+        const confirmed = await showConfirm(`确定删除账本「${ledger.name}」？`);
+        if (confirmed) {
+            deleteLedger(bookId);
+            renderLedgerList();
+            updateActiveBookName();
+            window.dispatchEvent(new CustomEvent('book-changed'));
+        }
+    } else {
+        // 有记录，需要迁移
+        const migrateModal = document.getElementById('migrateModal');
+        const infoText = document.getElementById('migrateInfoText');
+        const targetList = document.getElementById('migrateTargetList');
+
+        if (!migrateModal || !infoText || !targetList) return;
+
+        migrateSourceId = bookId;
+        migrateTargetId = null;
+
+        infoText.textContent = `账本「${ledger.name}」中有 ${stats.txCount} 条记录`;
+
+        // 获取其他账本作为迁移目标
+        const ledgers = loadLedgers().filter(l => l.id !== bookId);
+        targetList.innerHTML = ledgers.map(l => `
+            <div class="migrate-target-item" data-book-id="${l.id}">
+                <ion-icon name="${l.icon || 'book-outline'}"></ion-icon>
+                <span>${l.name}</span>
+            </div>
+        `).join('');
+
+        // 绑定目标选择事件
+        targetList.querySelectorAll('.migrate-target-item').forEach(item => {
+            item.onclick = () => {
+                migrateTargetId = item.dataset.bookId;
+                targetList.querySelectorAll('.migrate-target-item').forEach(i => {
+                    i.classList.toggle('selected', i.dataset.bookId === migrateTargetId);
+                });
+            };
+        });
+
+        migrateModal.classList.add('active');
     }
 }

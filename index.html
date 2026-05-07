@@ -206,6 +206,12 @@
 
                 <!-- Action Menu -->
                 <div class="mine-menu">
+                    <div class="menu-item" id="ledgerManageBtn">
+                        <ion-icon name="book-outline"></ion-icon>
+                        <span class="menu-text">账本管理</span>
+                        <span class="menu-val" id="activeBookName">默认账本</span>
+                        <ion-icon name="chevron-forward-outline" class="menu-arrow"></ion-icon>
+                    </div>
                     <div class="menu-item" id="exportDataBtn">
                         <ion-icon name="download-outline"></ion-icon>
                         <span class="menu-text">导出备份账单</span>
@@ -455,6 +461,10 @@
         <div id="exportFormatModal" class="modal-overlay" style="display: flex; align-items: center; justify-content: center;">
             <div class="dialog-box" style="width: 85%; max-width: 340px; padding: 24px 20px 16px;">
                 <div class="dialog-title">选择导出格式</div>
+                <div class="export-scope-selector">
+                    <div class="scope-option active" data-scope="current">当前账本</div>
+                    <div class="scope-option" data-scope="all">全部账本</div>
+                </div>
                 <div class="export-format-list">
                     <div class="export-format-option" data-format="json">
                         <ion-icon name="document-text-outline" style="font-size: 28px; color: #000;"></ion-icon>
@@ -516,6 +526,71 @@
                         <ion-icon name="close-outline" style="color: #333;"></ion-icon>
                     </button>
                     <img src="dashang.jpg" alt="打赏作者" style="width: 100%; max-width: 350px; border-radius: 12px; display: block;">
+                </div>
+            </div>
+        </div>
+
+        <!-- 账本管理弹窗 -->
+        <div id="ledgerModal" class="modal-overlay" style="display: flex; align-items: flex-end; justify-content: center;">
+            <div class="modal-content" style="width: 100%; max-width: 500px; max-height: 80vh; border-radius: 16px; padding: 0; overflow: hidden;">
+                <div class="modal-header">
+                    <span class="modal-title">账本管理</span>
+                    <button class="icon-btn" id="closeLedgerModal">
+                        <ion-icon name="close-outline"></ion-icon>
+                    </button>
+                </div>
+                <div class="ledger-list" id="ledgerList">
+                    <!-- 账本列表将通过 JS 动态生成 -->
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-add-ledger" id="addLedgerBtn">
+                        <ion-icon name="add-outline"></ion-icon>
+                        <span>新建账本</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 账本编辑弹窗 -->
+        <div id="ledgerEditModal" class="modal-overlay" style="display: flex; align-items: center; justify-content: center;">
+            <div class="dialog-box" style="width: 85%; max-width: 340px; padding: 24px 20px 16px;">
+                <div class="dialog-title" id="ledgerEditTitle">新建账本</div>
+                <div class="ledger-edit-form">
+                    <div class="form-group">
+                        <label>账本名称</label>
+                        <input type="text" id="ledgerNameInput" placeholder="请输入账本名称" maxlength="10">
+                    </div>
+                    <div class="form-group">
+                        <label>账本图标</label>
+                        <div class="icon-grid" id="ledgerIconGrid">
+                            <!-- 图标将通过 JS 动态生成 -->
+                        </div>
+                    </div>
+                </div>
+                <div class="dialog-actions" style="margin-top: 16px;">
+                    <button class="dialog-btn dialog-btn-cancel" id="cancelLedgerEdit">取消</button>
+                    <button class="dialog-btn dialog-btn-confirm" id="confirmLedgerEdit">确定</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 数据迁移确认弹窗 -->
+        <div id="migrateModal" class="modal-overlay" style="display: flex; align-items: center; justify-content: center;">
+            <div class="dialog-box" style="width: 85%; max-width: 340px; padding: 24px 20px 16px;">
+                <div class="dialog-title">删除账本</div>
+                <div class="migrate-info">
+                    <p id="migrateInfoText">账本中有 N 条记录</p>
+                    <p>请选择要迁移到的账本：</p>
+                </div>
+                <div class="migrate-target-list" id="migrateTargetList">
+                    <!-- 目标账本列表将通过 JS 动态生成 -->
+                </div>
+                <div class="dialog-actions" style="margin-top: 16px; display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; gap: 8px;">
+                        <button class="dialog-btn dialog-btn-cancel" id="cancelMigrate" style="flex: 1;">取消</button>
+                        <button class="dialog-btn dialog-btn-confirm" id="confirmMigrate" style="flex: 1;">迁移后删除</button>
+                    </div>
+                    <button class="dialog-btn" id="forceDeleteMigrate" style="width: 100%; background: #FF3B30; color: #fff; border: none; padding: 12px; border-radius: 8px; font-size: 15px; font-weight: 500; cursor: pointer;">直接删除（含记录）</button>
                 </div>
             </div>
         </div>
