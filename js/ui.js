@@ -515,7 +515,6 @@ export function initModal(onSave, onDelete) {
             stepAmount.classList.remove('hidden');
             if(typeToggle) typeToggle.style.visibility = 'hidden';
 
-            keypadController.reset();
             updateAmountDisplay();
         });
     });

@@ -29,7 +29,8 @@
       "Bash(npm install:*)",
       "Bash(npx cap:*)",
       "Bash(node:*)",
-      "Bash(where java:*)"
+      "Bash(where java:*)",
+      "Bash(./gradlew assembleRelease)"
     ]
   }
 }
