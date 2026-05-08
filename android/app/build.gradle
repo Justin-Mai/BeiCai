@@ -43,6 +43,8 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
+    // Google ML Kit 中文文字识别（本地离线，捆绑模型）
+    implementation 'com.google.mlkit:text-recognition-chinese:16.0.1'
 }
 
 apply from: 'capacitor.build.gradle'

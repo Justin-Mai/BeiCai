@@ -12,7 +12,7 @@ import {
 } from './ui.js';
 import { initCharts, triggerChartResize, initTimeframeSelector, renderSubTimeframe, updateChartsDataByRange } from './charts.js';
 import { renderAssets } from './assets.js';
-import { renderMineTab } from './mine.js';
+import { renderMineTab, updateAiGuideSection } from './mine.js';
 
 let currentSelectedMonth = "";
 let currentTimeframe = "week"; // default
@@ -93,10 +93,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         refreshCharts();
     });
 
-    // 监听从通知按钮打开记账弹窗
-    window.addEventListener('open-add-modal', () => {
-        openModalForNew();
+    // 监听从通知按钮打开记账弹窗（支持预填充数据）
+    window.addEventListener('open-add-modal', (e) => {
+        openModalForNew(e.detail || null);
     });
+
+    // 监听从设置页返回（刷新引导状态）
+    window.addEventListener('auto-book-resumed', () => {
+        if (typeof updateAiGuideSection === 'function') updateAiGuideSection();
+    });
+
+    // 主动检查 SharedPreferences 中是否有待处理的自动记账结果（防止冷启动事件丢失）
+    checkPendingAutoBookResult();
 
     // 6. Initial Load
     refreshDataAndUI();
@@ -167,3 +175,24 @@ async function startForegroundService() {
         console.warn('启动前台服务失败:', e);
     }
 }
+
+/**
+ * 检查 SharedPreferences 中是否有待处理的自动记账结果
+ * 防止冷启动时 MainActivity.onResume 派发事件时 JS 还未加载
+ */
+async function checkPendingAutoBookResult() {
+    try {
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AutoBook) {
+            const result = await window.Capacitor.Plugins.AutoBook.getPendingAutoBookResult();
+            if (result && result.hasResult && result.result) {
+                const data = JSON.parse(result.result);
+                openModalForNew(data);
+            }
+        }
+    } catch (e) {
+        console.warn('检查待处理自动记账结果失败:', e);
+    }
+}
+
+
+

@@ -642,10 +642,10 @@ export function initModal(onSave, onDelete) {
     }
 }
 
-export function openModalForNew() {
+export function openModalForNew(prefill) {
     editingId = null;
     keypadController.reset();
-    
+
     const typeBtns = document.querySelectorAll('.type-btn');
     const expenseGrid = document.getElementById('expenseCategories');
     const incomeGrid = document.getElementById('incomeCategories');
@@ -657,37 +657,93 @@ export function openModalForNew() {
     const noteInput = document.getElementById('txNote');
     const keypadDateDisplay = document.getElementById('keypadDateDisplay');
     const modal = document.getElementById('addModal');
-    
-    if(noteInput) noteInput.value = "";
+    const selectedCatIcon = document.getElementById('selectedCatIcon');
+    const selectedCatName = document.getElementById('selectedCatName');
+
+    if(noteInput) noteInput.value = prefill ? (prefill.note || "") : "";
     if (keySubmitAnother) keySubmitAnother.style.display = 'block';
     if (keyDeleteTxButton) keyDeleteTxButton.style.display = 'none';
 
+    // 设置收支类型
+    if (prefill && prefill.type) {
+        currentType = prefill.type;
+    } else {
+        currentType = 'expense';
+    }
+
     typeBtns.forEach(b => b.classList.remove('active'));
-    if (typeBtns[0]) typeBtns[0].classList.add('active');
-    currentType = 'expense';
-    
-    if (expenseGrid) {
-        expenseGrid.classList.remove('hidden');
-        // Select first real category (skip "添加" button)
-        const items = expenseGrid.querySelectorAll('.category-item:not(.add-category-btn)');
-        items.forEach(i => i.classList.remove('active'));
-        if (items.length > 0) {
-            items[0].classList.add('active');
-            currentCategory = items[0].getAttribute('data-name') || items[0].querySelector('span').textContent;
-            currentIconName = items[0].getAttribute('data-icon') || items[0].querySelector('ion-icon').getAttribute('name');
+    if (currentType === 'expense' && typeBtns[0]) {
+        typeBtns[0].classList.add('active');
+    } else if (currentType === 'income' && typeBtns[1]) {
+        typeBtns[1].classList.add('active');
+    }
+
+    // 设置分类
+    if (prefill && prefill.category) {
+        currentCategory = prefill.category;
+        currentIconName = prefill.icon || 'ellipsis-horizontal-outline';
+    } else {
+        const grid = currentType === 'expense' ? expenseGrid : incomeGrid;
+        if (grid) {
+            const items = grid.querySelectorAll('.category-item:not(.add-category-btn)');
+            items.forEach(i => i.classList.remove('active'));
+            if (items.length > 0) {
+                items[0].classList.add('active');
+                currentCategory = items[0].getAttribute('data-name') || items[0].querySelector('span').textContent;
+                currentIconName = items[0].getAttribute('data-icon') || items[0].querySelector('ion-icon').getAttribute('name');
+            }
         }
     }
-    if (incomeGrid) incomeGrid.classList.add('hidden');
 
-    if (stepAmount) stepAmount.classList.add('hidden');
-    if (stepCategory) stepCategory.classList.remove('hidden');
-    if (typeToggle) typeToggle.style.visibility = 'visible';
+    if (expenseGrid) {
+        if (currentType === 'expense') {
+            expenseGrid.classList.remove('hidden');
+        } else {
+            expenseGrid.classList.add('hidden');
+        }
+    }
+    if (incomeGrid) {
+        if (currentType === 'income') {
+            incomeGrid.classList.remove('hidden');
+        } else {
+            incomeGrid.classList.add('hidden');
+        }
+    }
 
-    // set today
+    // 设置日期
     const today2 = new Date();
-    keypadDateValue = `${today2.getFullYear()}-${String(today2.getMonth() + 1).padStart(2, '0')}-${String(today2.getDate()).padStart(2, '0')}`;
-    if (keypadDateDisplay) {
-        keypadDateDisplay.textContent = '今天';
+    if (prefill && prefill.date) {
+        keypadDateValue = prefill.date;
+        if (keypadDateDisplay) {
+            const [, m, d] = prefill.date.split('-');
+            const ty = today2.getFullYear(), tm = String(today2.getMonth() + 1).padStart(2, '0'), td = String(today2.getDate()).padStart(2, '0');
+            if (prefill.date === `${ty}-${tm}-${td}`) {
+                keypadDateDisplay.textContent = '今天';
+            } else {
+                keypadDateDisplay.textContent = `${m}-${d}`;
+            }
+        }
+    } else {
+        keypadDateValue = `${today2.getFullYear()}-${String(today2.getMonth() + 1).padStart(2, '0')}-${String(today2.getDate()).padStart(2, '0')}`;
+        if (keypadDateDisplay) {
+            keypadDateDisplay.textContent = '今天';
+        }
+    }
+
+    // 如果有预填充数据，直接跳到金额输入步骤
+    if (prefill && (prefill.amount || prefill.category)) {
+        if (prefill.amount) {
+            keypadController.setAmount(prefill.amount.toString());
+        }
+        if (selectedCatIcon) selectedCatIcon.setAttribute('name', currentIconName);
+        if (selectedCatName) selectedCatName.textContent = currentCategory;
+        if (stepCategory) stepCategory.classList.add('hidden');
+        if (stepAmount) stepAmount.classList.remove('hidden');
+        if (typeToggle) typeToggle.style.visibility = 'hidden';
+    } else {
+        if (stepAmount) stepAmount.classList.add('hidden');
+        if (stepCategory) stepCategory.classList.remove('hidden');
+        if (typeToggle) typeToggle.style.visibility = 'visible';
     }
 
     updateAmountDisplay();

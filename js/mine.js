@@ -929,9 +929,96 @@ function setupMineEvents() {
                 await window.Capacitor.Plugins.Foreground.updateNotification({
                     showAi: enabled
                 });
+                // 更新引导区域显示
+                updateAiGuideSection();
             };
+
+            // 初始化引导区域
+            updateAiGuideSection();
         }
     }
+}
+
+/**
+ * 更新 AI 记引导区域
+ */
+export async function updateAiGuideSection() {
+    const header = document.getElementById('aiGuideHeader');
+    const modal = document.getElementById('aiGuideModal');
+    if (!header) return;
+
+    const aiEnabled = localStorage.getItem('beicai_ai_enabled') === 'true';
+
+    // 未开启AI记：显示灰色，不可点击
+    if (!aiEnabled) {
+        header.style.display = 'flex';
+        header.style.opacity = '0.4';
+        header.style.pointerEvents = 'none';
+        return;
+    }
+
+    // 已开启AI记：正常显示，可点击打开弹窗
+    header.style.display = 'flex';
+    header.style.opacity = '1';
+    header.style.pointerEvents = 'auto';
+
+    // 点击打开弹窗
+    header.onclick = () => {
+        if (modal) modal.classList.add('active');
+        updateGuideAccessibilityStatus();
+    };
+
+    // 关闭弹窗
+    const closeBtn = document.getElementById('closeAiGuideModal');
+    if (closeBtn) {
+        closeBtn.onclick = () => { modal.classList.remove('active'); };
+    }
+    if (modal) {
+        modal.onclick = (e) => {
+            if (e.target === modal) modal.classList.remove('active');
+        };
+    }
+
+    // 点击跳转到无障碍设置
+    document.getElementById('guideAccessibility').onclick = async () => {
+        modal.classList.remove('active');
+        if (window.Capacitor?.Plugins?.AutoBook) {
+            try { await window.Capacitor.Plugins.AutoBook.openAccessibilitySettings(); } catch (e) {}
+        }
+    };
+
+    // 点击跳转到应用详情设置（自启动管理）
+    document.getElementById('guideAutoStart').onclick = async () => {
+        if (window.Capacitor?.Plugins?.AutoBook) {
+            try { await window.Capacitor.Plugins.AutoBook.openAppSettings(); } catch (e) {}
+        }
+    };
+
+    // 点击跳转到应用详情设置（权限管理）
+    document.getElementById('guideAppManage').onclick = async () => {
+        if (window.Capacitor?.Plugins?.AutoBook) {
+            try { await window.Capacitor.Plugins.AutoBook.openAppSettings(); } catch (e) {}
+        }
+    };
+}
+
+/** 更新弹窗中无障碍权限的状态 */
+async function updateGuideAccessibilityStatus() {
+    if (!window.Capacitor?.Plugins?.AutoBook) return;
+    try {
+        const result = await window.Capacitor.Plugins.AutoBook.checkAccessibility();
+        const guideAccIcon = document.getElementById('guideAccIcon');
+        const guideAccAction = document.getElementById('guideAccAction');
+        if (result.enabled) {
+            guideAccIcon.style.color = '#4CAF50';
+            guideAccAction.textContent = '已开启';
+            guideAccAction.style.color = '#4CAF50';
+        } else {
+            guideAccIcon.style.color = '#f44336';
+            guideAccAction.textContent = '未开启';
+            guideAccAction.style.color = '#f44336';
+        }
+    } catch (e) {}
 }
 
 /**

@@ -250,6 +250,13 @@
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
+                    <!-- AI记引导设置 -->
+                    <div class="menu-item" id="aiGuideHeader" style="display:none;">
+                        <ion-icon name="settings-outline"></ion-icon>
+                        <span class="menu-text">自动记账设置</span>
+                        <ion-icon name="chevron-forward-outline" class="menu-arrow"></ion-icon>
+                    </div>
+                    </div>
                 </div>
             </div>
         </main>
@@ -526,6 +533,42 @@
                         <ion-icon name="close-outline" style="color: #333;"></ion-icon>
                     </button>
                     <img src="dashang.jpg" alt="打赏作者" style="width: 100%; max-width: 350px; border-radius: 12px; display: block;">
+                </div>
+            </div>
+        </div>
+
+        <!-- 自动记账设置弹窗 -->
+        <div id="aiGuideModal" class="modal-overlay" style="display: flex; align-items: center; justify-content: center;">
+            <div class="dialog-box" style="width: 85%; max-width: 340px; padding: 24px 20px 16px;">
+                <div class="dialog-title">自动记账设置</div>
+                <div style="margin-top: 16px;">
+                    <div class="menu-item" id="guideAppManage" style="cursor:pointer;padding:12px 0;border-bottom:1px solid #f0f0f0;">
+                        <ion-icon name="apps-outline" style="color:#2196F3;"></ion-icon>
+                        <div style="margin-left:12px;flex:1;">
+                            <div style="font-size:15px;">权限管理</div>
+                            <div style="font-size:12px;color:#999;margin-top:2px;">允许应用获取权限</div>
+                        </div>
+                        <ion-icon name="chevron-forward-outline" style="color:#ccc;font-size:16px;"></ion-icon>
+                    </div>
+                    <div class="menu-item" id="guideAutoStart" style="cursor:pointer;padding:12px 0;border-bottom:1px solid #f0f0f0;">
+                        <ion-icon name="power-outline" style="color:#FF9800;"></ion-icon>
+                        <div style="margin-left:12px;flex:1;">
+                            <div style="font-size:15px;">自启动权限</div>
+                            <div style="font-size:12px;color:#999;margin-top:2px;">开启应用自启动(避免无障碍关闭)</div>
+                        </div>
+                        <ion-icon name="chevron-forward-outline" style="color:#ccc;font-size:16px;"></ion-icon>
+                    </div>
+                    <div class="menu-item" id="guideAccessibility" style="cursor:pointer;padding:12px 0;">
+                        <ion-icon name="accessibility-outline" style="color:#4CAF50;" id="guideAccIcon"></ion-icon>
+                        <div style="margin-left:12px;flex:1;">
+                            <div style="font-size:15px;" id="guideAccText">无障碍权限</div>
+                            <div style="font-size:12px;color:#999;margin-top:2px;" id="guideAccDesc">开启屏幕识别功能</div>
+                        </div>
+                        <span style="font-size:13px;" id="guideAccAction"></span>
+                    </div>
+                </div>
+                <div class="dialog-actions" style="margin-top: 16px;">
+                    <button class="dialog-btn dialog-btn-cancel" id="closeAiGuideModal">关闭</button>
                 </div>
             </div>
         </div>

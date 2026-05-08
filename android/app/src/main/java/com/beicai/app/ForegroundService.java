@@ -96,10 +96,10 @@ public class ForegroundService extends Service {
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
-        // "自动记"按钮 Intent
-        Intent aiIntent = new Intent(this, MainActivity.class);
+        // "自动记"按钮 Intent → 启动透明Activity（延迟截图后打开App）
+        Intent aiIntent = new Intent(this, AutoBookReceiver.class);
         aiIntent.setAction(ACTION_AUTO_ADD);
-        aiIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        aiIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         PendingIntent aiPendingIntent = PendingIntent.getActivity(
             this, 2, aiIntent,
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
