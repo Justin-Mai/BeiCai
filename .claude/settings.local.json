@@ -30,7 +30,15 @@
       "Bash(npx cap:*)",
       "Bash(node:*)",
       "Bash(where java:*)",
-      "Bash(./gradlew assembleRelease)"
+      "Bash(./gradlew assembleRelease)",
+      "Bash(wc:*)",
+      "Bash(pip install:*)",
+      "Bash(python generate_source_code_doc.py)",
+      "Bash(ls:*)",
+      "Bash(python generate_design_doc.py)",
+      "Bash(python -c ':*)",
+      "Bash(python gen_doc.py)",
+      "Bash(\"C:/Program Files/Android/Android Studio/jbr/bin/java.exe\" -version)"
     ]
   }
 }

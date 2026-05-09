@@ -11,7 +11,8 @@
       "Bash(cp \"D:/WorkSpace/BeiCai/js/mine.js\" \"D:/WorkSpace/BeiCai/www/js/mine.js\")",
       "Bash(cp \"D:/WorkSpace/BeiCai/index.html\" \"D:/WorkSpace/BeiCai/www/index.html\")",
       "Bash(cp \"D:/WorkSpace/BeiCai/style.css\" \"D:/WorkSpace/BeiCai/www/style.css\")",
-      "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ./gradlew assembleDebug)"
+      "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ./gradlew assembleDebug)",
+      "Bash(cp D:/WorkSpace/BeiCai/js/store.js D:/WorkSpace/BeiCai/www/js/store.js)"
     ]
   }
 }

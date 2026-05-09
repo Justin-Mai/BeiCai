@@ -4,7 +4,7 @@
  * 支持默认分类 + 用户自定义分类
  */
 
-const CUSTOM_CATEGORIES_KEY = 'beicai_custom_categories';
+import { getCustomCategories, saveCustomCategories } from './store.js';
 
 export const DEFAULT_EXPENSE_CATEGORIES = [
     { id: 'food', icon: 'restaurant-outline', name: '餐饮' },
@@ -47,18 +47,6 @@ export const DEFAULT_INCOME_CATEGORIES = [
 ];
 
 /**
- * 获取用户自定义分类
- */
-function getCustomCategories() {
-    try {
-        const saved = localStorage.getItem(CUSTOM_CATEGORIES_KEY);
-        return saved ? JSON.parse(saved) : { expense: [], income: [] };
-    } catch {
-        return { expense: [], income: [] };
-    }
-}
-
-/**
  * 获取全部分类（默认 + 自定义）
  * @param {'expense'|'income'} type
  * @returns {Array}
@@ -79,7 +67,7 @@ export function addCustomCategory(type, category) {
     if (!all[type]) all[type] = [];
     const id = 'custom_' + Date.now();
     all[type].push({ id, icon: category.icon, name: category.name });
-    localStorage.setItem(CUSTOM_CATEGORIES_KEY, JSON.stringify(all));
+    saveCustomCategories(all);
 }
 
 /**
@@ -91,7 +79,7 @@ export function deleteCustomCategory(type, id) {
     const all = getCustomCategories();
     if (all[type]) {
         all[type] = all[type].filter(c => c.id !== id);
-        localStorage.setItem(CUSTOM_CATEGORIES_KEY, JSON.stringify(all));
+        saveCustomCategories(all);
     }
 }
 

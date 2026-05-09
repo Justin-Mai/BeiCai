@@ -2,7 +2,13 @@ import {
     getUsageStats, getExchangeRates, saveExchangeRates, checkStorageHealth,
     loadLedgers, saveLedger, deleteLedger, setDefaultBook,
     getActiveBookId, setActiveBookId, getLedgerById, getLedgerStats,
-    migrateTransactions, getActiveBook, migrateLedgerData
+    migrateTransactions, getActiveBook, migrateLedgerData,
+    getUserProfile, saveUserProfile,
+    isAiEnabled, setAiEnabled,
+    isFgServiceDisabled, setFgServiceDisabled,
+    getInstallDate, setInstallDate,
+    loadAllTransactions, loadAccounts,
+    deleteTransactionsByBookId, importAllData
 } from './store.js';
 import { showAlert, showConfirm } from './dialog.js';
 import { initAvatarCrop } from './avatar-crop.js';
@@ -23,7 +29,7 @@ function renderAvatar(container, avatarValue) {
 
 /** 刷新「我的」页面数据（不重新绑定事件） */
 function refreshMineData() {
-    const profile = JSON.parse(localStorage.getItem('beicai_user_profile') || '{"avatar": "😊", "name": "极简达人", "slogan": "简单记账，掌控生活"}');
+    const profile = getUserProfile();
     document.getElementById('userNameDisplay').textContent = profile.name;
     document.getElementById('userSloganDisplay').textContent = profile.slogan;
     renderAvatar(document.getElementById('userAvatarContainer'), profile.avatar);
@@ -41,11 +47,11 @@ function refreshMineData() {
     const health = checkStorageHealth();
     const storageEl = document.getElementById('storageHealthInfo');
     if (storageEl) {
-        if (health.percent >= 80) {
-            storageEl.textContent = `存储 ${health.percent}%`;
+        if (health.warning) {
+            storageEl.textContent = `${health.txCount} 条记录`;
             storageEl.style.color = '#FF3B30';
-        } else if (health.percent >= 50) {
-            storageEl.textContent = `存储 ${health.percent}%`;
+        } else if (health.txCount > 10000) {
+            storageEl.textContent = `${health.txCount} 条记录`;
             storageEl.style.color = '#FF9500';
         } else {
             storageEl.textContent = '';
@@ -58,21 +64,19 @@ function refreshMineData() {
     // 前台服务开关状态
     const fgSwitch = document.getElementById('foregroundSwitch');
     if (fgSwitch) {
-        const fgDisabled = localStorage.getItem('beicai_fg_service_disabled');
-        fgSwitch.checked = fgDisabled !== 'true';
+        fgSwitch.checked = !isFgServiceDisabled();
     }
 
     // AI 记开关状态
     const aiSwitch = document.getElementById('aiSwitch');
     if (aiSwitch) {
-        const aiEnabled = localStorage.getItem('beicai_ai_enabled');
-        aiSwitch.checked = aiEnabled === 'true';
+        aiSwitch.checked = isAiEnabled();
         // 根据后台常驻状态设置可用性
-        const fgDisabled = localStorage.getItem('beicai_fg_service_disabled');
-        aiSwitch.disabled = fgDisabled === 'true';
+        const fgDisabled = isFgServiceDisabled();
+        aiSwitch.disabled = fgDisabled;
         const aiToggle = document.getElementById('aiToggle');
         if (aiToggle) {
-            aiToggle.style.opacity = fgDisabled === 'true' ? '0.5' : '1';
+            aiToggle.style.opacity = fgDisabled ? '0.5' : '1';
         }
     }
 }
@@ -105,7 +109,7 @@ function buildCategoryMap() {
 
 /** 获取账户 id → name 映射表 */
 function buildAccountNameMap() {
-    const accs = JSON.parse(localStorage.getItem('beicai_accounts') || '[]');
+    const accs = loadAccounts();
     const map = {};
     accs.forEach(acc => { map[acc.id] = acc.name; });
     return map;
@@ -113,7 +117,7 @@ function buildAccountNameMap() {
 
 /** 获取账户 name → id 映射表（用于导入） */
 function buildAccountIdMap() {
-    const accs = JSON.parse(localStorage.getItem('beicai_accounts') || '[]');
+    const accs = loadAccounts();
     const map = {};
     accs.forEach(acc => { map[acc.name] = acc.id; });
     return map;
@@ -124,7 +128,7 @@ function buildAccountIdMap() {
  * @param {boolean} includeBookColumn - 是否包含账本列
  */
 function buildExportRows(bookId = null, includeBookColumn = false) {
-    const txs = JSON.parse(localStorage.getItem('beicai_transactions') || '[]');
+    const txs = loadAllTransactions();
     const accNameMap = buildAccountNameMap();
     const ledgerMap = {};
     loadLedgers().forEach(l => { ledgerMap[l.id] = l.name; });
@@ -181,8 +185,8 @@ function arrayBufferToBase64(buffer) {
 // ============ 导出 JSON ============
 async function exportAsJson(scope = 'current') {
     const activeBookId = getActiveBookId();
-    let txs = JSON.parse(localStorage.getItem('beicai_transactions') || '[]');
-    let ledgersData = JSON.parse(localStorage.getItem('beicai_ledgers') || '[]');
+    let txs = loadAllTransactions();
+    let ledgersData = loadLedgers();
 
     // 按范围过滤交易和账本
     if (scope === 'current') {
@@ -191,14 +195,14 @@ async function exportAsJson(scope = 'current') {
         ledgersData = ledgersData.filter(l => l.id === activeBookId);
     }
 
-    const accs = localStorage.getItem('beicai_accounts') || '[]';
-    const rates = localStorage.getItem('beicai_exchange_rates') || '{}';
-    const installDate = localStorage.getItem('beicai_install_date') || '';
+    const accs = loadAccounts();
+    const rates = getExchangeRates();
+    const installDate = getInstallDate();
 
     const backupObj = {
         transactions: txs,
-        accounts: JSON.parse(accs),
-        exchangeRates: JSON.parse(rates),
+        accounts: accs,
+        exchangeRates: rates,
         ledgers: ledgersData,
         installDate
     };
@@ -301,19 +305,6 @@ async function exportAsCsv(scope = 'current') {
 // ============ 导入数据暂存 ============
 let pendingImportData = null; // { transactions, accounts?, exchangeRates?, installDate?, skipped?, count }
 
-/** 安全写入 localStorage */
-function safeSetItem(key, value) {
-    try {
-        localStorage.setItem(key, value);
-        return true;
-    } catch (e) {
-        if (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014) {
-            return false;
-        }
-        throw e;
-    }
-}
-
 /** 应用导入数据（覆盖或合并） */
 async function applyImportData(mode) {
     if (!pendingImportData) return;
@@ -321,120 +312,100 @@ async function applyImportData(mode) {
     pendingImportData = null;
 
     try {
-        // 覆盖模式：先导入账本数据，确保交易的bookId有对应的账本
-        if (mode === 'overwrite') {
-            // 1. 先导入账本（如果有）
-            if (data.ledgers && data.ledgers.length > 0) {
-                // 确保导入的账本列表中包含默认账本
-                const hasDefault = data.ledgers.some(l => l.id === 'book_default');
-                if (!hasDefault) {
-                    data.ledgers.push({
-                        id: 'book_default',
-                        name: '默认账本',
-                        icon: 'book-outline',
-                        isDefault: true,
-                        createdAt: new Date().toISOString()
-                    });
-                }
-                safeSetItem('beicai_ledgers', JSON.stringify(data.ledgers));
+        const activeBookId = getActiveBookId();
+        const timeBase = Date.now();
+
+        // 判断是否为单账本导入：data.ledgers 多个 或 交易涉及多个不同 bookId 均视为多账本
+        const hasMultipleLedgers = data.ledgers && data.ledgers.length > 1;
+        const hasDiverseBookIds = data.transactions &&
+            new Set(data.transactions.map(t => t.bookId).filter(Boolean)).size > 1;
+        const isSingleLedgerImport = !hasMultipleLedgers && !hasDiverseBookIds;
+
+        if (data.transactions) {
+            if (isSingleLedgerImport) {
+                // 单账本导入：重新生成ID，全部指派到当前活跃账本
+                data.transactions.forEach((tx, idx) => {
+                    tx.id = timeBase + idx;
+                    tx.bookId = activeBookId;
+                });
             } else {
-                // 如果没有账本数据，确保有默认账本
+                // 多账本导入：按名称匹配已有账本
                 const existingLedgers = loadLedgers();
-                if (existingLedgers.length === 0) {
-                    safeSetItem('beicai_ledgers', JSON.stringify([{
-                        id: 'book_default',
-                        name: '默认账本',
-                        icon: 'book-outline',
-                        isDefault: true,
-                        createdAt: new Date().toISOString()
-                    }]));
-                }
-            }
-            // 重新加载账本列表
-            loadLedgers();
+                const existingNameMap = {};
+                existingLedgers.forEach(l => { existingNameMap[l.name] = l.id; });
 
-            // 2. 验证并修复交易的bookId
-            if (data.transactions) {
-                const validBookIds = new Set(loadLedgers().map(l => l.id));
-                const defaultBookId = 'book_default';
-                data.transactions.forEach(tx => {
-                    // 如果交易没有bookId，或者bookId不存在于账本列表中，则设为默认账本
-                    if (!tx.bookId || !validBookIds.has(tx.bookId)) {
-                        tx.bookId = defaultBookId;
+                const bookIdMapping = {};
+                const newLedgers = [];
+                const allRemappedLedgers = [];
+
+                (data.ledgers || []).forEach((importedLedger, i) => {
+                    const existingId = existingNameMap[importedLedger.name];
+                    if (existingId) {
+                        bookIdMapping[importedLedger.id] = existingId;
+                        if (mode === 'overwrite') {
+                            allRemappedLedgers.push({ ...importedLedger, id: existingId });
+                        }
+                    } else {
+                        const newId = `book_${timeBase}_${i}_${Math.random().toString(36).substr(2, 9)}`;
+                        bookIdMapping[importedLedger.id] = newId;
+                        const newLedger = {
+                            ...importedLedger,
+                            id: newId,
+                            isDefault: false,
+                            createdAt: importedLedger.createdAt || new Date().toISOString()
+                        };
+                        newLedgers.push(newLedger);
+                        allRemappedLedgers.push(newLedger);
                     }
                 });
-            }
 
-            // 3. 导入交易数据
-            if (data.transactions && !safeSetItem('beicai_transactions', JSON.stringify(data.transactions))) {
-                await showAlert('导入失败：存储空间不足，请先清理旧数据。', '存储已满');
-                return;
-            }
-            if (data.accounts) safeSetItem('beicai_accounts', JSON.stringify(data.accounts));
-            if (data.exchangeRates) safeSetItem('beicai_exchange_rates', JSON.stringify(data.exchangeRates));
-            if (data.installDate) safeSetItem('beicai_install_date', data.installDate);
-        } else {
-            // 合并模式：先合并账本，再合并交易
-            // 1. 合并账本数据
-            const existingLedgers = loadLedgers();
-            if (data.ledgers && data.ledgers.length > 0) {
-                const existingLedgerIds = new Set(existingLedgers.map(l => l.id));
-                const newLedgers = data.ledgers.filter(l => !existingLedgerIds.has(l.id));
-                // 确保有默认账本
-                const hasDefault = existingLedgers.some(l => l.id === 'book_default') ||
-                                   newLedgers.some(l => l.id === 'book_default');
-                if (!hasDefault) {
-                    newLedgers.push({
-                        id: 'book_default',
-                        name: '默认账本',
-                        icon: 'book-outline',
-                        isDefault: true,
-                        createdAt: new Date().toISOString()
-                    });
-                }
-                if (newLedgers.length > 0) {
-                    safeSetItem('beicai_ledgers', JSON.stringify([...existingLedgers, ...newLedgers]));
-                }
-            } else if (existingLedgers.length === 0) {
-                // 如果没有账本数据且当前也没有账本，创建默认账本
-                safeSetItem('beicai_ledgers', JSON.stringify([{
-                    id: 'book_default',
-                    name: '默认账本',
-                    icon: 'book-outline',
-                    isDefault: true,
-                    createdAt: new Date().toISOString()
-                }]));
-            }
-            // 重新加载账本列表
-            loadLedgers();
-
-            // 2. 验证并修复交易的bookId
-            const validBookIds = new Set(loadLedgers().map(l => l.id));
-            const defaultBookId = 'book_default';
-            if (data.transactions) {
-                data.transactions.forEach(tx => {
-                    if (!tx.bookId || !validBookIds.has(tx.bookId)) {
-                        tx.bookId = defaultBookId;
+                // 重新生成交易ID并重映射 bookId
+                data.transactions.forEach((tx, idx) => {
+                    tx.id = timeBase + idx + 10000;
+                    if (tx.bookId && bookIdMapping[tx.bookId]) {
+                        tx.bookId = bookIdMapping[tx.bookId];
+                    } else {
+                        tx.bookId = activeBookId;
                     }
                 });
-            }
 
-            // 3. 合并交易数据（去重后追加）
-            const existingTxs = JSON.parse(localStorage.getItem('beicai_transactions') || '[]');
-            const existingIds = new Set(existingTxs.map(t => t.id));
-            const newTxs = (data.transactions || []).filter(t => !existingIds.has(t.id));
-            if (!safeSetItem('beicai_transactions', JSON.stringify([...existingTxs, ...newTxs]))) {
-                await showAlert('导入失败：存储空间不足，请先清理旧数据。', '存储已满');
-                return;
+                // 覆盖模式：替换为所有重映射后的账本
+                // 合并模式：只添加新创建的账本（已匹配的不需要新增）
+                data.ledgers = mode === 'overwrite' ? allRemappedLedgers : newLedgers;
             }
-            if (data.accounts) {
-                const existingAccs = JSON.parse(localStorage.getItem('beicai_accounts') || '[]');
-                const existingAccIds = new Set(existingAccs.map(a => a.id));
-                const newAccs = data.accounts.filter(a => !existingAccIds.has(a.id));
-                safeSetItem('beicai_accounts', JSON.stringify([...existingAccs, ...newAccs]));
-            }
-            if (data.exchangeRates) safeSetItem('beicai_exchange_rates', JSON.stringify(data.exchangeRates));
         }
+
+        // 确保有默认账本（仅多账本导入需要）
+        const DEFAULT_LEDGER = {
+            id: 'book_default',
+            name: '默认账本',
+            icon: 'book-outline',
+            isDefault: true,
+            createdAt: new Date().toISOString()
+        };
+
+        if (!isSingleLedgerImport) {
+            if (mode === 'overwrite') {
+                if (data.ledgers && data.ledgers.length > 0) {
+                    if (!data.ledgers.some(l => l.id === 'book_default')) {
+                        data.ledgers.push(DEFAULT_LEDGER);
+                    }
+                } else {
+                    data.ledgers = [DEFAULT_LEDGER];
+                }
+            } else {
+                if (!data.ledgers) data.ledgers = [];
+                const existingLedgers = loadLedgers();
+                const hasDefault = existingLedgers.some(l => l.id === 'book_default') ||
+                                   data.ledgers.some(l => l.id === 'book_default');
+                if (!hasDefault && existingLedgers.length === 0) {
+                    data.ledgers.push(DEFAULT_LEDGER);
+                }
+            }
+        }
+
+        // 调用 store 的批量导入
+        importAllData(data, mode);
     } catch (e) {
         await showAlert('导入出错：' + e.message, '导入失败');
         return;
@@ -536,7 +507,7 @@ function parseTabularRows(rows) {
         if (accountName && accIdMap[accountName]) accountId = accIdMap[accountName];
 
         // 根据账本名称查找账本ID，如果不存在则创建新账本
-        let bookId = null;
+        let bookId = getActiveBookId() || 'book_default'; // 默认指派到当前活跃账本
         if (bookName) {
             if (ledgerNameMap[bookName]) {
                 bookId = ledgerNameMap[bookName];
@@ -551,9 +522,7 @@ function parseTabularRows(rows) {
                     createdAt: new Date().toISOString()
                 };
                 // 保存新账本
-                const currentLedgers = JSON.parse(localStorage.getItem('beicai_ledgers') || '[]');
-                currentLedgers.push(newLedger);
-                localStorage.setItem('beicai_ledgers', JSON.stringify(currentLedgers));
+                saveLedger(newLedger);
                 // 更新映射
                 ledgerNameMap[bookName] = newBookId;
                 bookId = newBookId;
@@ -564,16 +533,20 @@ function parseTabularRows(rows) {
             id: Date.now() + idx,
             type, title: category || '其他', icon,
             amount: numAmount.toFixed(2),
-            date: parsedDate, note: note || '', accountId
+            date: parsedDate, note: note || '', accountId,
+            bookId
         };
-        if (bookId) {
-            tx.bookId = bookId;
-        }
         txs.push(tx);
     });
 
     if (txs.length === 0) return null;
-    return { transactions: txs, count: txs.length, skipped };
+
+    // 收集交易所属的账本列表
+    const distinctBookIds = [...new Set(txs.map(t => t.bookId).filter(Boolean))];
+    const allLedgers = loadLedgers();
+    const usedLedgers = allLedgers.filter(l => distinctBookIds.includes(l.id));
+
+    return { transactions: txs, count: txs.length, skipped, ledgers: usedLedgers };
 }
 
 // ============ 事件绑定 ============
@@ -597,7 +570,7 @@ function setupMineEvents() {
 
     if (editProfileBtn && profileModal) {
         editProfileBtn.onclick = () => {
-            const profile = JSON.parse(localStorage.getItem('beicai_user_profile') || '{"avatar": "😊", "name": "极简达人", "slogan": "简单记账，掌控生活"}');
+            const profile = getUserProfile();
             pendingAvatar = null;
 
             const preview = document.getElementById('avatarPreview');
@@ -619,12 +592,12 @@ function setupMineEvents() {
         };
 
         document.getElementById('saveProfileBtn').onclick = async () => {
-            const profile = JSON.parse(localStorage.getItem('beicai_user_profile') || '{"avatar": "😊", "name": "极简达人", "slogan": "简单记账，掌控生活"}');
+            const profile = getUserProfile();
             const avatar = pendingAvatar || profile.avatar || '😊';
             const name = document.getElementById('nameInput').value.trim() || '极简达人';
             const slogan = document.getElementById('sloganInput').value.trim() || '简单记账，掌控生活';
 
-            if (!safeSetItem('beicai_user_profile', JSON.stringify({ avatar, name, slogan }))) {
+            if (!saveUserProfile({ avatar, name, slogan })) {
                 await showAlert('保存失败：存储空间不足。请尝试使用较小的头像图片。', '存储已满');
                 return;
             }
@@ -880,20 +853,19 @@ function setupMineEvents() {
             fgToggle.style.display = 'flex';
 
             // 读取用户设置
-            const fgDisabled = localStorage.getItem('beicai_fg_service_disabled');
-            fgSwitch.checked = fgDisabled !== 'true';
+            fgSwitch.checked = !isFgServiceDisabled();
 
             // 切换事件
             fgSwitch.onchange = async () => {
                 const enabled = fgSwitch.checked;
                 if (enabled) {
-                    localStorage.removeItem('beicai_fg_service_disabled');
+                    setFgServiceDisabled(false);
                     await window.Capacitor.Plugins.Foreground.start({
                         title: '贝才',
                         content: '记账服务运行中'
                     });
                 } else {
-                    localStorage.setItem('beicai_fg_service_disabled', 'true');
+                    setFgServiceDisabled(true);
                     await window.Capacitor.Plugins.Foreground.stop();
                 }
                 // 更新 AI 记开关状态
@@ -910,8 +882,7 @@ function setupMineEvents() {
             aiToggle.style.display = 'flex';
 
             // 读取用户设置
-            const aiEnabled = localStorage.getItem('beicai_ai_enabled');
-            aiSwitch.checked = aiEnabled === 'true';
+            aiSwitch.checked = isAiEnabled();
 
             // 根据后台常驻状态设置可用性
             updateAiToggleState();
@@ -920,11 +891,7 @@ function setupMineEvents() {
             aiSwitch.onchange = async () => {
                 if (aiSwitch.disabled) return;
                 const enabled = aiSwitch.checked;
-                if (enabled) {
-                    localStorage.setItem('beicai_ai_enabled', 'true');
-                } else {
-                    localStorage.removeItem('beicai_ai_enabled');
-                }
+                setAiEnabled(enabled);
                 // 更新通知内容
                 await window.Capacitor.Plugins.Foreground.updateNotification({
                     showAi: enabled
@@ -947,7 +914,7 @@ export async function updateAiGuideSection() {
     const modal = document.getElementById('aiGuideModal');
     if (!header) return;
 
-    const aiEnabled = localStorage.getItem('beicai_ai_enabled') === 'true';
+    const aiEnabled = isAiEnabled();
 
     // 未开启AI记：显示灰色，不可点击
     if (!aiEnabled) {
@@ -1029,14 +996,13 @@ function updateAiToggleState() {
     const aiToggle = document.getElementById('aiToggle');
     if (!aiSwitch || !aiToggle) return;
 
-    const fgDisabled = localStorage.getItem('beicai_fg_service_disabled');
-    const isDisabled = fgDisabled === 'true';
+    const isDisabled = isFgServiceDisabled();
     aiSwitch.disabled = isDisabled;
     aiToggle.style.opacity = isDisabled ? '0.5' : '1';
 
     if (isDisabled && aiSwitch.checked) {
         aiSwitch.checked = false;
-        localStorage.removeItem('beicai_ai_enabled');
+        setAiEnabled(false);
     }
 }
 
@@ -1328,9 +1294,7 @@ function setupLedgerModal() {
         if (!confirmed) return;
 
         // 删除账本下的所有交易
-        const transactions = JSON.parse(localStorage.getItem('beicai_transactions') || '[]');
-        const filteredTxs = transactions.filter(t => t.bookId !== migrateSourceId);
-        localStorage.setItem('beicai_transactions', JSON.stringify(filteredTxs));
+        deleteTransactionsByBookId(migrateSourceId);
 
         // 删除账本
         deleteLedger(migrateSourceId);

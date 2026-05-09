@@ -1,4 +1,4 @@
-import { loadTransactions, loadAllTransactions, saveTransaction, deleteTransaction, findTransaction, migrateLedgerData, getActiveBookId } from './store.js';
+import { initStore, loadTransactions, loadAllTransactions, saveTransaction, deleteTransaction, findTransaction, migrateLedgerData, getActiveBookId, isFgServiceDisabled, isAiEnabled } from './store.js';
 import {
     renderCategoryGrids,
     renderTransactions,
@@ -19,7 +19,10 @@ let currentTimeframe = "week"; // default
 
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // 0. 迁移账本数据（创建默认账本，为现有交易添加 bookId）
+    // 0. 初始化存储层（打开 IndexedDB，执行数据迁移，加载内存缓存）
+    await initStore();
+
+    // 0.1 迁移账本数据（创建默认账本，为现有交易添加 bookId）
     migrateLedgerData();
 
     // 1. Render dynamic category grids
@@ -157,17 +160,15 @@ function refreshCharts(shouldScroll = true) {
 async function startForegroundService() {
     try {
         // 检查是否在安卓平台，且用户未手动关闭
-        const fgDisabled = localStorage.getItem('beicai_fg_service_disabled');
-        if (fgDisabled === 'true') return;
+        if (isFgServiceDisabled()) return;
 
         if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Foreground) {
-            const aiEnabled = localStorage.getItem('beicai_ai_enabled') === 'true';
             await window.Capacitor.Plugins.Foreground.start({
                 title: '贝才',
                 content: '记账服务运行中'
             });
             // 恢复 AI 记状态
-            if (aiEnabled) {
+            if (isAiEnabled()) {
                 await window.Capacitor.Plugins.Foreground.updateNotification({ showAi: true });
             }
         }
