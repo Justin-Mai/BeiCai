@@ -69,11 +69,20 @@ npx cap open android
 
 ## 数据存储
 
-所有数据存储在浏览器 `localStorage` 中，建议定期使用导出功能备份数据。
+所有数据存储在浏览器 `IndexedDB` 中，提供更大的存储空间，建议定期使用导出功能备份数据。
 
 ## 开发初衷
 
 市面上的记账软件要么太复杂，要么广告多，要么需要注册登录。我就想要一个简单、干净、好用的记账工具，于是有了贝才。
+
+## 许可证
+
+本项目采用 [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) 许可协议，仅供个人学习和非商业使用。如需商业授权，请联系作者。
+
+## 联系作者
+
+- GitHub: [Justin-Mai](https://github.com/Justin-Mai/BeiCai)
+- 邮箱: 813370079@qq.com
 
 ---
 
