@@ -77,7 +77,7 @@ npx cap open android
 
 ## 许可证
 
-本项目采用 [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) 许可协议，仅供个人学习和非商业使用。如需商业授权，请联系作者。
+本项目采用 [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) 许可协议。
 
 ## 联系作者
 
