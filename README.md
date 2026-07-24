@@ -223,14 +223,4 @@ Android 专属的智能前沿黑科技，基于纯单机无障碍服务与 OCR �
   <img src="picture/dashang.jpg" alt="打赏作者" width="220" style="border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);" />
 </div>
 
----
 
-## Star History
-
-<a href="https://www.star-history.com/?repos=Justin-Mai%2FBeiCai&type=date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=Justin-Mai/BeiCai&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=Justin-Mai/BeiCai&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=Justin-Mai/BeiCai&type=date&legend=top-left" />
- </picture>
-</a>
