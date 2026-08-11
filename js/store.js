@@ -371,13 +371,18 @@ export function loadTransactions(currentSelectedMonth, filterAccountId = null, f
 /**
  * 加载全部交易数据（不分月过滤，供图表使用）
  * @param {string} filterBookId - 可选：按账本 ID 过滤
+ * @param {boolean} includeAdjustments - 是否包含余额调整记录，默认为 false
  */
-export function loadAllTransactions(filterBookId = null) {
+export function loadAllTransactions(filterBookId = null, includeAdjustments = false) {
     // flatTransactions 已排序，filter 保持相对顺序
+    let txs = flatTransactions;
     if (filterBookId) {
-        return flatTransactions.filter(t => t.bookId === filterBookId);
+        txs = txs.filter(t => t.bookId === filterBookId);
     }
-    return [...flatTransactions];
+    if (!includeAdjustments) {
+        txs = txs.filter(t => !t.isAdjustment);
+    }
+    return [...txs];
 }
 
 /**
@@ -506,7 +511,7 @@ export function deleteAccount(id) {
  * 获取"我的"页面统计信息（记账天数）
  */
 export function getUsageStats() {
-    const uniqueDates = new Set(flatTransactions.map(t => t.date));
+    const uniqueDates = new Set(flatTransactions.filter(t => !t.isAdjustment).map(t => t.date));
     const accountingDays = uniqueDates.size;
     return { accountingDays };
 }
@@ -654,7 +659,7 @@ export function getLedgerById(bookId) {
  * @returns {{ txCount: number }} 统计信息
  */
 export function getLedgerStats(bookId) {
-    const txCount = flatTransactions.filter(t => t.bookId === bookId).length;
+    const txCount = flatTransactions.filter(t => t.bookId === bookId && !t.isAdjustment).length;
     return { txCount };
 }
 

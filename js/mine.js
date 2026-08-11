@@ -185,7 +185,7 @@ function arrayBufferToBase64(buffer) {
 // ============ 导出 JSON ============
 async function exportAsJson(scope = 'current') {
     const activeBookId = getActiveBookId();
-    let txs = loadAllTransactions();
+    let txs = loadAllTransactions(null, true);
     let ledgersData = loadLedgers();
 
     // 按范围过滤交易和账本
