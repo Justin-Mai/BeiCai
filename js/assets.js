@@ -567,10 +567,15 @@ function setupDetailActionListeners(assetId) {
             const input = await showPrompt(`调整【${asset.name}】的余额，请输入当前的真实金额：`, asset.balance.toString(), '调整余额');
             if (input === null || input.trim() === '') return;
 
-            const newBalance = parseFloat(input);
+            let newBalance = parseFloat(input);
             if (isNaN(newBalance)) {
                 await showAlert('请输入有效的数字金额');
                 return;
+            }
+
+            // 负债类型自动转为负数
+            if (asset.type === 'credit' && newBalance > 0) {
+                newBalance = -newBalance;
             }
 
             if (newBalance !== asset.balance) {
