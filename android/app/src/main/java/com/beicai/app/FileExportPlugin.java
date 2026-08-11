@@ -80,7 +80,7 @@ public class FileExportPlugin extends Plugin {
                 ContentValues values = new ContentValues();
                 values.put(MediaStore.Downloads.DISPLAY_NAME, fileName);
                 values.put(MediaStore.Downloads.MIME_TYPE, mimeType);
-                values.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
+                values.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/BeiCai");
 
                 Uri uri = getContext().getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
                 if (uri != null) {
@@ -94,7 +94,7 @@ public class FileExportPlugin extends Plugin {
                 }
             } else {
                 // Android 9 及以下
-                File dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+                File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "BeiCai");
                 if (!dir.exists()) dir.mkdirs();
                 File file = new File(dir, fileName);
                 FileOutputStream fos = new FileOutputStream(file);

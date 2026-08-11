@@ -212,7 +212,7 @@ async function exportAsJson(scope = 'current') {
     try {
         if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.FileExport) {
             await window.Capacitor.Plugins.FileExport.exportJson({ data: jsonStr, fileName });
-            await showAlert(`备份已保存到：下载/${fileName}`, '导出成功');
+            await showAlert(`备份已保存到：下载/BeiCai/${fileName}`, '导出成功');
             return;
         }
         const blob = new Blob([jsonStr], { type: 'application/json' });
@@ -251,7 +251,7 @@ async function exportAsExcel(scope = 'current') {
                 data: base64, fileName,
                 mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             });
-            await showAlert(`备份已保存到：下载/${fileName}`, '导出成功');
+            await showAlert(`备份已保存到：下载/BeiCai/${fileName}`, '导出成功');
             return;
         }
         XLSX.writeFile(wb, fileName);
@@ -291,7 +291,7 @@ async function exportAsCsv(scope = 'current') {
             const bytes = new TextEncoder().encode(csvContent);
             const base64 = arrayBufferToBase64(bytes.buffer);
             await window.Capacitor.Plugins.FileExport.exportBase64({ data: base64, fileName, mimeType: 'text/csv' });
-            await showAlert(`备份已保存到：下载/${fileName}`, '导出成功');
+            await showAlert(`备份已保存到：下载/BeiCai/${fileName}`, '导出成功');
             return;
         }
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
