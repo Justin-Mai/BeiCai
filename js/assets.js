@@ -130,7 +130,7 @@ export function renderAssets() {
                             <ion-icon name="${acc.icon}"></ion-icon>
                         </div>
                         <div class="acc-info">
-                            <div class="acc-name">${acc.name} <span class="acc-type-tag" style="display:none">${types[acc.type]}</span></div>
+                            <div class="acc-name">${escapeHtml(acc.name)} <span class="acc-type-tag" style="display:none">${types[acc.type]}</span></div>
                             <div class="acc-type">${types[type]}</div>
                         </div>
                         <div class="acc-balance ${isNegative ? 'negative' : ''}">
@@ -497,7 +497,7 @@ function openAssetDetails(assetId) {
 
     cardContainer.innerHTML = `
         <div class="asset-card-large">
-            <div class="acc-name">${asset.name} <span class="acc-type-tag">${types[asset.type] || '账户'}</span></div>
+            <div class="acc-name">${escapeHtml(asset.name)} <span class="acc-type-tag">${types[asset.type] || '账户'}</span></div>
             <div class="acc-balance">${(asset.balance || 0).toFixed(2)}${asset.currency && asset.currency !== 'CNY' ? ' <span style="font-size: 16px; font-weight: normal; color: #666;">' + asset.currency + '</span>' : ''}</div>
             <div class="acc-label">余额</div>
         </div>
@@ -509,8 +509,36 @@ function openAssetDetails(assetId) {
 }
 
 function setupDetailActionListeners(assetId) {
+    const renameBtn = document.getElementById('renameAssetBtn');
     const deleteBtn = document.getElementById('deleteAssetBtn');
     const adjustBtn = document.getElementById('adjustBalanceBtnFooter');
+
+    if (renameBtn) {
+        renameBtn.onclick = async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const accounts = loadAccounts();
+            const asset = accounts.find(a => a.id === assetId);
+            if (!asset) return;
+
+            const newName = await showPrompt('修改资产名称：', asset.name, '重命名资产');
+            if (newName === null) return;
+
+            const trimmedName = newName.trim();
+            if (!trimmedName) {
+                await showAlert('资产名称不能为空');
+                return;
+            }
+
+            if (trimmedName !== asset.name) {
+                asset.name = trimmedName;
+                saveAccount(asset);
+                renderAssets();
+                openAssetDetails(assetId);
+            }
+        };
+    }
 
     if (deleteBtn) {
         deleteBtn.onclick = async (e) => {
