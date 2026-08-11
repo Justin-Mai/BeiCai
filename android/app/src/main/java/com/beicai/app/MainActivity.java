@@ -31,6 +31,22 @@ public class MainActivity extends BridgeActivity {
     }
 
     @Override
+    public void onBackPressed() {
+        if (getBridge() != null && getBridge().getWebView() != null) {
+            getBridge().getWebView().evaluateJavascript(
+                "(function() { return (typeof window.handleAppBack === 'function') ? window.handleAppBack() : true; })();",
+                value -> {
+                    if ("true".equals(value)) {
+                        moveTaskToBack(true);
+                    }
+                }
+            );
+        } else {
+            moveTaskToBack(true);
+        }
+    }
+
+    @Override
     public void onResume() {
         super.onResume();
         // 检查 SharedPreferences 中是否有待处理的自动记账结果

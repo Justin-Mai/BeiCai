@@ -121,15 +121,102 @@ document.addEventListener('DOMContentLoaded', async () => {
         refreshDataAndUI();
     });
 
-    // 8. 预请求通知权限 (仅安卓平台)
-    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Foreground) {
+    // 9. 监听 Android 返回键 / Capacitor backButton 事件
+    setupBackButtonHandler();
+});
+
+/**
+ * 全局安卓返回键处理函数
+ * 逻辑顺序：
+ * 1. 若有自定义弹窗 (dialog.js / picker 等)，优先关闭弹窗
+ * 2. 若有二级全屏页 (如资产详情页 #assetDetailsPage)，关闭二级页回到主视图
+ * 3. 若有常规模态框 (.modal-overlay.active)，关闭最顶层模态框 (记账弹窗金额输入步骤切回分类选择)
+ * 4. 若当前主 Tab 不在“明细”页 (如在图表/资产/我的)，先切回“明细”主页
+ * 5. 若已经在“明细”主页且无任何弹窗，返回 true 表示允许退出软件
+ */
+window.handleAppBack = function handleAppBack() {
+    // 1. 优先检查自定义弹窗容器 (dialog / date-picker / icon-picker 等)
+    const customContainer = document.getElementById('customDialogContainer');
+    if (customContainer && customContainer.children.length > 0) {
+        const cancelBtn = customContainer.querySelector('.dialog-btn-cancel, #alertOkBtn');
+        if (cancelBtn) {
+            cancelBtn.click();
+        } else {
+            customContainer.innerHTML = '';
+        }
+        return false;
+    }
+
+    // 2. 检查资产详情全屏页 (#assetDetailsPage)
+    const assetDetailsPage = document.getElementById('assetDetailsPage');
+    if (assetDetailsPage && !assetDetailsPage.classList.contains('hidden')) {
+        assetDetailsPage.classList.add('hidden');
+        return false;
+    }
+
+    // 3. 检查常规 Modal 弹窗 (.modal-overlay.active)
+    const activeModals = Array.from(document.querySelectorAll('.modal-overlay.active'));
+    if (activeModals.length > 0) {
+        const topModal = activeModals[activeModals.length - 1];
+
+        // 特殊处理记账弹窗步骤返回
+        if (topModal.id === 'addModal') {
+            const stepAmount = document.getElementById('stepAmount');
+            const stepCategory = document.getElementById('stepCategory');
+            const typeToggle = document.getElementById('modalTypeToggle');
+            const keySubmitAnother = document.getElementById('keySubmitAnother');
+
+            if (stepAmount && !stepAmount.classList.contains('hidden') && keySubmitAnother && keySubmitAnother.style.display !== 'none') {
+                stepAmount.classList.add('hidden');
+                if (stepCategory) stepCategory.classList.remove('hidden');
+                if (typeToggle) typeToggle.style.visibility = 'visible';
+                return false;
+            }
+        }
+
+        const closeBtn = topModal.querySelector('.icon-btn, .dialog-btn-cancel, #closeModalBtn, #closeAssetModal, #closeProfileModal, #closeCropModal, #closeExchangeRateModal, #closeExportFormatModal, #closeImportModeModal, #closeDashangModal, #closeAiGuideModal, #closeLedgerModal, #cancelLedgerEdit, #cancelMigrate');
+        if (closeBtn) {
+            closeBtn.click();
+        } else {
+            topModal.classList.remove('active');
+        }
+        return false;
+    }
+
+    // 4. 检查当前主界面激活的 Tab
+    const activeNav = document.querySelector('.nav-item.active');
+    const currentTab = activeNav ? activeNav.getAttribute('data-tab') : null;
+
+    if (currentTab && currentTab !== 'tab-details') {
+        const detailsNav = document.querySelector('.nav-item[data-tab="tab-details"]');
+        if (detailsNav) {
+            detailsNav.click();
+        }
+        return false;
+    }
+
+    // 5. 在主界面（明细 Tab）且无任何弹窗/二级页，允许退出软件
+    return true;
+};
+
+function setupBackButtonHandler() {
+    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
         try {
-            await window.Capacitor.Plugins.Foreground.requestPermission();
+            window.Capacitor.Plugins.App.addListener('backButton', () => {
+                const shouldExit = window.handleAppBack();
+                if (shouldExit) {
+                    if (window.Capacitor.Plugins.App.exitApp) {
+                        window.Capacitor.Plugins.App.exitApp();
+                    } else if (window.Capacitor.Plugins.App.minimizeApp) {
+                        window.Capacitor.Plugins.App.minimizeApp();
+                    }
+                }
+            });
         } catch (e) {
-            // 忽略权限请求失败
+            console.warn('注册 Capacitor backButton 监听失败:', e);
         }
     }
-});
+}
 
 function refreshDataAndUI() {
     const activeBookId = getActiveBookId();
