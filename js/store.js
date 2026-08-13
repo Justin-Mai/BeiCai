@@ -352,8 +352,10 @@ export function loadTransactions(currentSelectedMonth, filterAccountId = null, f
         const amt = parseFloat(t.amount) || 0;
         if (t.type === 'income') {
             monthIncome += amt;
+            grouped[t.date].income += amt;
         } else {
             monthExpense += amt;
+            grouped[t.date].expense += amt;
         }
     });
 
