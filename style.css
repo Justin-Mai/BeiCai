@@ -818,49 +818,76 @@ body {
     padding: 10px;
 }
 
-/* 统计汇总栏样式 - 强制横向整齐排列 */
+/* 统计汇总栏样式 - 总结余单独一行，总支出与总收入在同一行两列 */
 .statistics-summary {
     display: flex !important;
-    flex-direction: row !important;
-    justify-content: space-between !important;
-    align-items: center !important;
+    flex-direction: column !important;
     padding: 0 15px !important;
-    margin-bottom: 25px !important;
-    gap: 8px !important;
+    margin-bottom: 20px !important;
+    gap: 10px !important;
     width: 100% !important;
     box-sizing: border-box !important;
 }
 
-.stat-item {
-    flex: 1 !important;
-    background: #fdfdfd !important;
-    border: 1px solid #222 !important;
-    border-radius: 8px !important;
-    padding: 8px 4px !important;
+.stat-balance-card {
+    width: 100% !important;
+    background: #ffffff !important;
+    border: 1.5px solid #111111 !important;
+    border-radius: 12px !important;
+    padding: 14px 18px !important;
     display: flex !important;
-    flex-direction: row !important; /* 强制 label 和 value 横向排列 */
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 6px !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+    box-sizing: border-box !important;
 }
 
-.stat-label {
-    font-size: 11px !important;
-    color: #888 !important;
+.stat-balance-card .stat-label {
+    font-size: 12px !important;
+    color: #8e8e93 !important;
     font-weight: 500 !important;
-    margin-bottom: 0 !important; /* 清除之前可能的 margin */
+    margin-bottom: 4px !important;
 }
 
-.stat-value {
-    font-size: 13px !important;
+.stat-balance-card .stat-value.balance {
+    font-size: 26px !important;
     font-weight: 700 !important;
-    color: #222 !important;
+    color: #111111 !important;
+}
+
+.stat-flow-row {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 10px !important;
+    width: 100% !important;
+}
+
+.stat-flow-row .stat-item {
+    flex: 1 !important;
+    background: #f8f8fa !important;
+    border: 1px solid #e5e5ea !important;
+    border-radius: 12px !important;
+    padding: 12px 14px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+}
+
+.stat-flow-row .stat-item .stat-label {
+    font-size: 11px !important;
+    color: #8e8e93 !important;
+    font-weight: 500 !important;
+    margin-bottom: 4px !important;
+}
+
+.stat-flow-row .stat-item .stat-value {
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    color: #111111 !important;
     white-space: nowrap !important;
 }
-
-.stat-value.expense { color: #111 !important; }
-.stat-value.income { color: #111 !important; }
-.stat-value.balance { color: #111 !important; }
 
 /* 排行榜样式 */
 .ranking-list {
@@ -961,7 +988,7 @@ body {
 .assets-overview .net-assets-value {
     font-size: 32px;
     font-weight: 700;
-    margin-bottom: 24px;
+    margin-bottom: 16px;
     display: block;
     color: #000;
 }
@@ -970,18 +997,18 @@ body {
     display: flex;
     justify-content: space-between;
     border-top: 1px solid #f2f2f7;
-    padding-top: 20px;
+    padding-top: 16px;
     gap: 15px;
 }
 
-.assets-overview .stat-item {
+.assets-overview .stat-item-sub {
     flex: 1;
     background: #f8f8f8;
     padding: 12px;
     border-radius: 12px;
 }
 
-.assets-overview .stat-label {
+.assets-overview .stat-label-sub {
     font-size: 11px;
     color: #8e8e93;
     margin-bottom: 6px;
@@ -990,10 +1017,73 @@ body {
     letter-spacing: 0.5px;
 }
 
-.assets-overview .stat-value {
+.assets-overview .stat-value-sub {
     font-size: 18px;
     font-weight: 600;
     color: #000;
+}
+
+.assets-divider {
+    height: 1px;
+    background-color: #f2f2f7;
+    margin: 18px 0;
+}
+
+.assets-summary-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.summary-balance-box {
+    display: flex;
+    flex-direction: column;
+    background: #f8f8fa;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid #e5e5ea;
+}
+
+.summary-label {
+    font-size: 12px;
+    color: #8e8e93;
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+
+.summary-balance-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1c1c1e;
+}
+
+.summary-flow-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.summary-flow-item {
+    flex: 1;
+    background: #f8f8fa;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid #e5e5ea;
+}
+
+.summary-flow-value {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1c1c1e;
+    display: block;
+}
+
+.summary-flow-value.expense {
+    color: #111111;
+}
+
+.summary-flow-value.income {
+    color: #111111;
 }
 
 .account-list-container {

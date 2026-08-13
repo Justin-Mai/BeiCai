@@ -86,18 +86,42 @@ export function renderAssets() {
     const summary = getAssetsSummary();
     const accounts = loadAccounts();
 
+    const today = new Date();
+    const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+    const { monthIncome, monthExpense } = loadTransactions(currentMonth);
+    const monthBalance = monthIncome - monthExpense;
+
     // 1. 渲染总览卡片
     assetsOverview.innerHTML = `
-        <span class="net-assets-label">净资产 (元)</span>
-        <span class="net-assets-value">${summary.netAssets}</span>
-        <div class="assets-details">
-            <div class="stat-item">
-                <span class="stat-label">总资产</span>
-                <span class="stat-value">${summary.totalAssets}</span>
+        <div class="net-assets-section">
+            <span class="net-assets-label">净资产 (元)</span>
+            <span class="net-assets-value">${summary.netAssets}</span>
+            <div class="assets-details">
+                <div class="stat-item-sub">
+                    <span class="stat-label-sub">总资产</span>
+                    <span class="stat-value-sub">${summary.totalAssets}</span>
+                </div>
+                <div class="stat-item-sub" style="text-align: right;">
+                    <span class="stat-label-sub">总负债</span>
+                    <span class="stat-value-sub">${summary.totalLiabilities}</span>
+                </div>
             </div>
-            <div class="stat-item" style="text-align: right;">
-                <span class="stat-label">总负债</span>
-                <span class="stat-value">${summary.totalLiabilities}</span>
+        </div>
+        <div class="assets-divider"></div>
+        <div class="assets-summary-section">
+            <div class="summary-flow-row">
+                <div class="summary-flow-item">
+                    <span class="summary-label">总支出</span>
+                    <span class="summary-flow-value expense">-${monthExpense.toFixed(2)}</span>
+                </div>
+                <div class="summary-flow-item" style="text-align: right;">
+                    <span class="summary-label">总收入</span>
+                    <span class="summary-flow-value income">+${monthIncome.toFixed(2)}</span>
+                </div>
+            </div>
+            <div class="summary-balance-box">
+                <span class="summary-label">结余</span>
+                <span class="summary-balance-value">${monthBalance.toFixed(2)}</span>
             </div>
         </div>
     `;
