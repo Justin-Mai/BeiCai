@@ -95,7 +95,7 @@ export function renderAssets() {
                 <span class="stat-label">总资产</span>
                 <span class="stat-value">${summary.totalAssets}</span>
             </div>
-            <div class="stat-item" style="text-align: right;">
+            <div class="stat-item">
                 <span class="stat-label">总负债</span>
                 <span class="stat-value">${summary.totalLiabilities}</span>
             </div>

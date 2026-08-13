@@ -1012,10 +1012,6 @@ body {
     align-items: flex-start !important;
 }
 
-.assets-overview .stat-item[style*="text-align: right"] {
-    align-items: flex-end !important;
-}
-
 .assets-overview .stat-label {
     font-size: 11px !important;
     color: #8e8e93 !important;

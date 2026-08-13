@@ -1,12 +1,12 @@
 # ==========================================
-# 贝才 3.1.2 APK 一键编译 PowerShell 脚本
+# 贝才 3.1.3 APK 一键编译 PowerShell 脚本
 # ==========================================
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 Set-Location $ScriptDir
 
 Write-Host "==========================================" -ForegroundColor Cyan
-Write-Host "     BeiCai v3.1.2 APK Build Script" -ForegroundColor Cyan
+Write-Host "     BeiCai v3.1.3 APK Build Script" -ForegroundColor Cyan
 Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -73,10 +73,10 @@ if ($LASTEXITCODE -ne 0) {
 # 5. 导出 APK
 Set-Location $ScriptDir
 if (Test-Path $ApkPath) {
-    Copy-Item -Path $ApkPath -Destination "$ScriptDir\beicai-apk-v3.1.2.apk" -Force
+    Copy-Item -Path $ApkPath -Destination "$ScriptDir\beicai-apk-v3.1.3.apk" -Force
     Write-Host ""
     Write-Host "==========================================" -ForegroundColor Green
-    Write-Host "[SUCCESS] Built successfully: beicai-apk-v3.1.2.apk" -ForegroundColor Green
+    Write-Host "[SUCCESS] Built successfully: beicai-apk-v3.1.3.apk" -ForegroundColor Green
     Write-Host "==========================================" -ForegroundColor Green
 } else {
     Write-Host "[ERROR] APK file not found at $ApkPath" -ForegroundColor Red
