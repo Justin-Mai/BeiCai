@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 echo ==========================================
-echo      BeiCai v3.1.3 APK Build Script
+echo      BeiCai v3.1.4 APK Build Script
 echo ==========================================
 echo.
 
@@ -113,7 +113,7 @@ if %ERRORLEVEL% neq 0 (
         exit /b 1
     )
     set "APK_REL_PATH=app\build\outputs\apk\debug\app-debug.apk"
-) else (
+} else (
     set "APK_REL_PATH=app\build\outputs\apk\release\app-release.apk"
 )
 
@@ -125,10 +125,10 @@ echo [5/5] Copying APK to root directory...
 cd /d "%~dp0"
 
 if exist "android\!APK_REL_PATH!" (
-    copy /Y "android\!APK_REL_PATH!" "beicai-apk-v3.1.3.apk"
+    copy /Y "android\!APK_REL_PATH!" "beicai-apk-v3.1.4.apk"
     echo.
     echo ==========================================
-    echo [SUCCESS] Built successfully: beicai-apk-v3.1.3.apk
+    echo [SUCCESS] Built successfully: beicai-apk-v3.1.4.apk
     echo ==========================================
 ) else (
     echo [ERROR] APK file not found at android\!APK_REL_PATH!

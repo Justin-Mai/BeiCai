@@ -1,4 +1,4 @@
-import { DEFAULT_EXPENSE_CATEGORIES as EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES as INCOME_CATEGORIES } from './categories.js';
+import { getCategories } from './categories.js';
 
 let expensePieChart = null;
 let trendChart = null;
@@ -445,14 +445,16 @@ export function updateChartsDataByRange(allFlatTransactions, rangeObj) {
         } else {
             const listHtml = rankingData.map((item, index) => {
                 const percent = rankingTotal > 0 ? ((item.value / rankingTotal) * 100).toFixed(1) : '0.0';
-                // 查找对应分类的图标
-                const cats = currentRankingType === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
-                const catInfo = cats.find(c => c.name === item.name) || { icon: 'help-outline' };
+                // 查找对应分类的图标（支持默认分类 + 自定义分类 + 交易记录自带图标兜底）
+                const cats = getCategories(currentRankingType);
+                const catInfo = cats.find(c => c.name === item.name);
+                const txMatch = filteredTx.find(t => t.type === currentRankingType && t.title === item.name && t.icon);
+                const iconName = (catInfo && catInfo.icon) || (txMatch && txMatch.icon) || 'ellipsis-horizontal-outline';
                 
                 return `
                     <div class="ranking-item">
                         <div class="ranking-icon">
-                            <ion-icon name="${catInfo.icon}"></ion-icon>
+                            <ion-icon name="${iconName}"></ion-icon>
                         </div>
                         <div class="ranking-info">
                             <div class="ranking-top-row">
